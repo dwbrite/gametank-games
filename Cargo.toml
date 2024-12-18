@@ -1,0 +1,33 @@
+[package]
+name = "gametank-games"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# web server / async
+tokio = { version = "1.41.1",  features = ["rt-multi-thread"] }
+axum = { version = "0.7.7", features = ["macros"] }
+tower-http = { version = "0.6.2", features = ["fs"] }
+reqwest = { version = "0.12.9", features = ["json"] }
+utoipa = "5.2.0"
+utoipa-swagger-ui = "8.0.3"
+
+# logging / data
+tracing-subscriber = "0.3.18"
+uuid = { version = "1.11.0", features = ["v4"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0"
+dotenvy = "0.15.7"
+
+# sql / auth
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio-native-tls", "migrate"] }
+keycloak = "26.0.200"
+casbin = { version = "2.5.0", default-features = false, features = ["runtime-tokio", "logging", "incremental"] }
+sqlx-adapter = { version = "1.6.0", default-features = false, features = ["postgres", "runtime-tokio-native-tls"]}
+axum-core = "0.4.5"
+http = "1.1.0"
+
+itertools = "0.13.0"
+
+[build-dependencies]
+npm_rs = "1.0.0"
