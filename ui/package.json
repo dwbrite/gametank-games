@@ -1,0 +1,34 @@
+{
+  "name": "ui",
+  "version": "1.0.0",
+  "main": "index.html",
+  "scripts": {
+    "build:coffee": "coffee --transpile --map --output ../target/ui/js/ src/",
+    "build:public": "npx copyfiles --up 1 \"public/**/*\" ../target/ui",
+    "build:sass": "sass --source-map css/styles.scss ../target/ui/styles.css",
+    "watch:coffee": "coffee --watch --transpile --map --output ../target/ui/js/ src/",
+    "watch:public": "npx copyfiles --up 1 \"public/**/*\" ../target/ui --watch",
+    "watch:sass": "sass --watch --source-map css/styles.scss:../target/ui/styles.css",
+    "watch": "concurrently \"npm run watch:coffee\" \"npm run watch:sass\" \"npm run watch:public\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@babel/cli": "^7.26.4",
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-transform-react-jsx": "^7.25.9",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "browserify": "^17.0.1",
+    "coffeeify": "^3.0.1",
+    "coffeescript": "^2.7.0",
+    "concurrently": "^9.1.0",
+    "sass": "^1.82.0",
+    "watchify": "^4.0.0"
+  },
+  "dependencies": {
+    "mithril": "^2.2.11"
+  }
+}
