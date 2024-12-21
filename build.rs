@@ -1,6 +1,8 @@
 use npm_rs::*;
 
 fn main() {
+    println!("cargo:rerun-if-changed=migrations");
+
     NpmEnv::default()
         .set_path("ui")
         .init_env()

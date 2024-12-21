@@ -1,12 +1,15 @@
+#![allow(unused)]
+
 mod games;
 mod auth;
+mod darn;
 
 use std::env;
 use tokio;
 use axum::{debug_handler, routing::get, Json, Router};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{get_service};
+use axum::routing::{get_service, post};
 use sqlx::{migrate, PgPool};
 use std::sync::Arc;
 use axum::extract::{Request, State};
@@ -16,13 +19,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
-use utoipa::OpenApi;
-use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, Keycloak};
-
+use utoipa::{OpenApi, ToSchema};
+use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
+use crate::games::create_game;
 // #[derive(OpenApi)]
 // #[openapi(paths(upload_game), components(schemas(GameEntry)))]
 // pub struct ApiDoc;
 
+pub struct AppState {
+    pub keycloak: KeycloakClient,
+    pub casbin: Casbin,
+    pub pg_pool: PgPool,
+    pub reqwest: Client,
+}
 
 #[tokio::main]
 async fn main() {
@@ -36,18 +45,19 @@ async fn main() {
     let pool = PgPool::connect(&database_url).await.unwrap();
     migrate!().run(&pool).await.expect("Failed to run migrations");
 
-    let keycloak = init_keycloak().await;
-    let casbin = init_casbin(database_url).await;
-
-    // reqwest http client
-    let client = Arc::new(Client::new());
-
+    let appstate = Arc::new(AppState {
+        keycloak: init_keycloak().await,
+        casbin: init_casbin(database_url).await,
+        pg_pool: pool,
+        reqwest: Client::new(),
+    });
 
     // route endpoints
     let api_router = Router::new()
-        .route("/user-info", get(get_user_info)) // and then is enforced
-        .layer(axum::middleware::from_fn(authn_keycloak_middleware)) // user validation applies first
-        .with_state((client, casbin, keycloak));
+        .route("/user-info", get(get_user_info))
+        .route("/games", post(create_game))
+        .layer(axum::middleware::from_fn_with_state(appstate.clone(), authn_keycloak_middleware))
+        .with_state(appstate.clone());
 
     // build our application with a route
     let app = Router::new()
@@ -64,18 +74,18 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct UserInfo {
-    sub: String,
-    preferred_username: String,
-    email: String,
+#[derive(ToSchema, Serialize, Deserialize, Debug, Clone)]
+pub struct UserInfo {
+    pub sub: String, // TODO: don't rename :))
+    pub preferred_username: String,
+    pub email: String,
 }
 
-type MaybeUserInfo = Option<UserInfo>;
+pub type MaybeUserInfo = Option<UserInfo>;
 
 #[debug_handler]
 async fn get_user_info(
-    State((client, casbin, keycloak)): State<(Arc<Client>, Casbin, Keycloak)>,
+    State(app): State<Arc<AppState>>,
     request: Request,
 ) -> impl IntoResponse {
     let user_info = request.extensions().get::<MaybeUserInfo>().cloned();

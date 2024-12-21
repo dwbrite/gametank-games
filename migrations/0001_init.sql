@@ -1,10 +1,14 @@
 CREATE TABLE IF NOT EXISTS game_entries (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
+    game_id UUID PRIMARY KEY,
+    game_name TEXT NOT NULL,
     description TEXT NOT NULL,
-    author TEXT NOT NULL,
-    rom TEXT,
-    thumbnail TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    author UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    game_rom BYTEA NOT NULL
+);
+
+CREATE TABLE user_login (
+    user_id UUID PRIMARY KEY,
+    last_login TIMESTAMP NOT NULL
 );

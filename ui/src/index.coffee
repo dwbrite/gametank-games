@@ -26,26 +26,32 @@ Api =
       }
     })
       .then((response) ->
-      if response.ok
-        return response.json();
-      else
-        throw new Error("Failed to fetch user info")
+        if response.ok
+          return response.json();
+        else
+          throw new Error("Failed to fetch user info")
     )
       .then((data) ->
-      console.log('User info from backend:', data)
+        console.log('User info from backend:', data)
     )
       .catch((error) ->
-      console.error('Error fetching user info:', error)
+        console.error('Error fetching user info:', error)
     )
 
   create_resource: ->
     console.log("creating resource")
-    fetch('/api/create-resource', {
+    fetch('/api/games', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + keycloak.token,  # Send Keycloak token
         'Content-Type': 'application/json'
-      }  # Convert resource object to JSON
+      },
+      body: JSON.stringify {
+        "game_name": "My First Game",
+        "description": "This is a cool game with no ROM data yet!",
+        "game_rom": []
+      }
+
     })
 
 shimApiWithTokenRefresh = (api) ->
@@ -53,7 +59,7 @@ shimApiWithTokenRefresh = (api) ->
 
   Object.keys(api).forEach (key) ->
     originalFn = api[key]
-    shimmedApi[key] = async (...args) ->
+    shimmedApi[key] = (...args) ->
       try
         await keycloak.updateToken(30)
       catch err
