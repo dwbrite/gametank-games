@@ -60,11 +60,12 @@ shimApiWithTokenRefresh = (api) ->
   Object.keys(api).forEach (key) ->
     originalFn = api[key]
     shimmedApi[key] = (...args) ->
-      try
-        await keycloak.updateToken(30)
-      catch err
-        console.error 'Failed to refresh token', err
-        throw new Error 'Token refresh failed'
+      if authenticated
+        try
+          await keycloak.updateToken(30)
+        catch err
+          console.error 'Failed to refresh token', err
+          throw new Error 'Token refresh failed'
 
       originalFn(...args)
 
@@ -84,8 +85,8 @@ Auth =
     <div>
       <button onclick={Auth.login} disabled={authenticated}>Login</button>
       <button onclick={Auth.logout} disabled={!authenticated}>Logout</button>
-      {if authenticated then <button onclick={Auth.api.load_user_info}>User Info</button>}
-      <button onclick={Auth.api.create_resource} disabled={!authenticated}>create resource</button>
+      <button onclick={Auth.api.load_user_info}>User Info</button>
+      {if authenticated then <button onclick={Auth.api.create_resource} disabled={!authenticated}>create game</button>}
     </div>
 
 

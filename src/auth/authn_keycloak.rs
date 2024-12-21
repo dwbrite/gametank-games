@@ -11,7 +11,7 @@ use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
 use uuid::Uuid;
-use crate::{AppState, UserInfo};
+use crate::{AppState, MaybeUserInfo, UserInfo};
 
 pub struct KeycloakClient {
     pub admin: KeycloakAdmin,
@@ -51,22 +51,19 @@ pub async fn authn_keycloak_middleware(
     let url = "https://keycloak.dwbrite.com/realms/gametank-games/protocol/openid-connect/userinfo";
 
     let maybe_token = request.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok());
-    let mut user_info = None;
+    let mut user_info = UserInfo {
+        sub: "guest".to_string(),
+        preferred_username: "guest".to_string(),
+        email: "".to_string(),
+    };
 
 
     if let Some(token) = maybe_token {
         let token = token.trim_start_matches("Bearer ").to_string();
         if let Ok(response) = client.get(url).bearer_auth(token).send().await {
             if response.status().is_success() {
-                user_info = response.json::<UserInfo>().await.ok();
-                match &user_info {
-                    None => { warn!("no user info :(("); }
-                    Some(user_info) => {
-                        let uid = user_info.sub.parse().unwrap();
-                        // checking if user is in db
-                        check_first_login(&app, uid).await;
-                    }
-                }
+                user_info = response.json::<UserInfo>().await.unwrap();
+                check_first_login(&app, &user_info).await;
             }
         }
     }
@@ -79,11 +76,16 @@ pub async fn authn_keycloak_middleware(
 }
 
 // Rust function to check user login and assign 'user' role if first login
-pub async fn check_first_login(app: &Arc<AppState>, user_id: Uuid) -> anyhow::Result<()> {
+pub async fn check_first_login(
+    app: &Arc<AppState>,
+    user: &UserInfo
+) -> anyhow::Result<()> {
+    let user_uuid =  Uuid::parse_str(&user.sub).expect("failed to parse user uuid");
+
     warn!("check first login");
     let exists = sqlx::query_scalar!(
         "SELECT EXISTS (SELECT 1 FROM user_login WHERE user_id = $1)",
-        user_id
+        user_uuid
     )
         .fetch_one(&app.pg_pool)
         .await?;
@@ -94,14 +96,14 @@ pub async fn check_first_login(app: &Arc<AppState>, user_id: Uuid) -> anyhow::Re
         // First login: insert into user_login and assign 'user' role
         sqlx::query!(
             "INSERT INTO user_login (user_id, last_login) VALUES ($1, NOW())",
-            user_id
+            user_uuid
         )
             .execute(&app.pg_pool)
             .await?;
 
         // Add user to 'user' role in Casbin
         println!("inserted entry; adding user to user group");
-        app.casbin.add_role_for_user(&user_id.to_string(), "user").await?;
+        app.casbin.add_role_for_user(&user, "user").await?;
     }
 
     Ok(())

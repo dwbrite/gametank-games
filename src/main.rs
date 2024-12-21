@@ -6,7 +6,7 @@ mod darn;
 
 use std::env;
 use tokio;
-use axum::{debug_handler, routing::get, Json, Router};
+use axum::{debug_handler, routing::get, Extension, Json, Router};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get_service, post};
@@ -86,15 +86,12 @@ pub type MaybeUserInfo = Option<UserInfo>;
 #[debug_handler]
 async fn get_user_info(
     State(app): State<Arc<AppState>>,
+    Extension(user_info): Extension<UserInfo>,
     request: Request,
 ) -> impl IntoResponse {
-    let user_info = request.extensions().get::<MaybeUserInfo>().cloned();
 
     // Return a unified type for all match arms
-    let body = match user_info {
-        Some(maybe_user) => json!(maybe_user), // Serialize UserInfo into JSON
-        None => json!({ "message": "Guest user" }),
-    };
+    let body = json!(user_info);
 
     (StatusCode::OK, Json(body))
 }

@@ -78,7 +78,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing_subscriber::fmt::format;
 use utoipa::ToSchema;
-use crate::{AppState, MaybeUserInfo};
+use crate::{AppState, MaybeUserInfo, UserInfo};
 
 #[utoipa::path(
     post,
@@ -90,10 +90,9 @@ use crate::{AppState, MaybeUserInfo};
         (status = 500, description = "Internal server error")
     )
 )]
-#[debug_handler]
 pub async fn create_game(
     State(app): State<Arc<AppState>>,
-    Extension(user_info): Extension<MaybeUserInfo>,
+    Extension(user_info): Extension<UserInfo>,
     Json(game_input): Json<GameEntryCreate>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
     // 1. Authorization: check if user can "create" a "game"
@@ -102,20 +101,22 @@ pub async fn create_game(
         .await;
 
     if !can_create {
-        app.casbin
+        let roles = app.casbin.get_implicit_roles_for_user(&user_info).await;
+        let perms = app.casbin.get_implicit_permissions_for_user(&user_info).await;
+        eprintln!("User {} roles: {:?}", user_info.sub, roles);
+        eprintln!("User {} perms: {:?}", user_info.sub, perms);
+
         return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
     }
 
-    // 2. We have a valid user (Some) at this point (otherwise can_create = false).
-    let user = user_info.unwrap();
-
     // 3. Insert into the database
     //    `author` could store user.sub or user.preferred_username, whichever your schema expects
+    let new_id = Uuid::new_v4();
     let new_row = sqlx::query_as!(
         GameEntryData,
         r#"
-        INSERT INTO game_entries (game_name, description, game_rom, author)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO game_entries (game_id, game_name, description, game_rom, author)
+        VALUES ($1, $2, $3, $4, $5)
         RETURNING
           game_id,
           game_name,
@@ -125,10 +126,11 @@ pub async fn create_game(
           updated_at,
           game_rom
         "#,
+        new_id,
         game_input.game_name,
         game_input.description,
         game_input.game_rom,
-        Uuid::parse_str(&user.sub).expect("Failed to parse user uuid"),
+        Uuid::parse_str(&user_info.sub).expect("Failed to parse user uuid"),
     )
         .fetch_one(&app.pg_pool)
         .await
@@ -149,7 +151,7 @@ pub async fn create_game(
 
     let game_darn = format!("game:{}", new_row.game_id);
     let new_role = format!("{}:author", game_darn);
-    let _ = app.casbin.add_role_for_user(&user.sub, &new_role).await;
+    let _ = app.casbin.add_role_for_user(&user_info, &new_role).await;
     let _ = app.casbin.add_allow_policy(&new_role, "*", &game_darn).await;
 
     // 5. Return 201 Created with the metadata
