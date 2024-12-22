@@ -22,8 +22,8 @@ use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
 use strum_macros::Display;
 use utoipa::{OpenApi, ToSchema};
-use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, IntoDarnWithContext, KeycloakClient};
-use crate::darn::{DarNS, Darn};
+use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, RoleMarker, KeycloakClient};
+use crate::darn::{Darn};
 use crate::games::create_game;
 // #[derive(OpenApi)]
 // #[openapi(paths(upload_game), components(schemas(GameEntry)))]
@@ -82,14 +82,6 @@ pub struct UserInfo {
     pub sub: String, // TODO: don't rename :))
     pub preferred_username: String,
     pub email: String,
-}
-
-pub const USER_NS: DarNS = DarNS("user");
-
-impl From<&UserInfo> for Darn {
-    fn from(user: &UserInfo) -> Self {
-        USER_NS.new_child(&user.sub)
-    }
 }
 
 pub type MaybeUserInfo = Option<UserInfo>;

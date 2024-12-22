@@ -11,10 +11,10 @@ use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
 use uuid::Uuid;
-use crate::{AppState, MaybeUserInfo, UserInfo, USER_NS};
-use crate::auth::{IntoDarnWithContext, SITE_NS};
-use crate::auth::SiteRoles::{Admin, Guest, User};
-use crate::darn::Darn;
+use crate::{AppState, MaybeUserInfo, UserInfo};
+use crate::auth::{RoleMarker};
+// use crate::auth::SiteRoles::{Admin, Guest, User};
+use crate::darn::{Darn, DarnUser};
 
 pub struct KeycloakClient {
     pub admin: KeycloakAdmin,
@@ -65,9 +65,10 @@ pub async fn authn_keycloak_middleware(
         let token = token.trim_start_matches("Bearer ").to_string();
         if let Ok(response) = client.get(url).bearer_auth(token).send().await {
             if response.status().is_success() {
-                user_info = response.json::<UserInfo>().await.unwrap();
+                user_info = response.json::<UserInfo>().await.unwrap(); // TODO: we unwrap?!?!?!?
+                let user = DarnUser::from(&user_info);
 
-                check_user_roles(&app, &user_info).await;
+                check_user_roles(&app, &user).await;
             }
         }
     }
@@ -86,7 +87,7 @@ pub async fn check_user_roles<T: Into<Darn>>(
 ) -> anyhow::Result<()> {
     let user = &user.into();
     let admins = [
-        USER_NS.new_child("6d93fb96-8dad-410e-880d-ed79ca568bc3")
+        // USER_NS.new_child("6d93fb96-8dad-410e-880d-ed79ca568bc3")
     ];
 
     // Check if the user has a role
@@ -96,14 +97,14 @@ pub async fn check_user_roles<T: Into<Darn>>(
     if roles.is_empty() {
         if admins.contains(&user) {
             info!("User is an admin; assigning 'site:admin' role");
-            app.casbin
-                .add_subj_role(user, &SITE_NS.role(&Admin))
-                .await?;
+            // app.casbin
+            //     .add_subj_role(user, &SITE_NS.role(&Admin))
+            //     .await?;
         } else {
             info!("User is not an admin; assigning 'site:user' role");
-            app.casbin
-                .add_subj_role(user, &SITE_NS.role(&User))
-                .await?;
+            // app.casbin
+            //     .add_subj_role(user, &SITE_NS.role(&User))
+            //     .await?;
         }
     } else {
         println!("User already has roles; no changes made");

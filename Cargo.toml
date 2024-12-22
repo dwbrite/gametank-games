@@ -33,6 +33,7 @@ anyhow = "1.0.94"
 
 strum = "0.26.3"
 strum_macros = "0.26.4"
+maplit = "1.0.2"
 
 [build-dependencies]
 npm_rs = "1.0.0"

@@ -1,29 +1,74 @@
 use std::fmt::{Display, Formatter};
-use crate::auth::IntoDarnWithContext;
+use std::ops::Deref;
+use strum_macros::Display;
+use crate::auth::RoleMarker;
+use crate::UserInfo;
 
 /// Devin's abstract resource names
 
-pub struct DarNS(pub &'static str);
-
-impl DarNS {
-    pub fn new_child(&self, name: &str) -> Darn {
-        Darn::new(&self.0).new_child(name)
-    }
-
-    pub fn role(&self, role: &dyn IntoDarnWithContext) -> Darn {
-        role.to_darn(&self.into())
+#[derive(Debug, Clone)]
+pub struct DarnRole(Darn);
+impl DarnRole {
+    pub fn from_context(role_name: &str, ctx: &Darn) -> DarnRole {
+        let ns = Darn::new("role");
+        let resource = ctx.new_child(role_name);
+        DarnRole(ns.new_child(&resource.to_string()))
     }
 }
 
-impl From<DarNS> for Darn {
-    fn from(ns: DarNS) -> Self {
-        Darn::new(&ns.0)
+
+impl From<&DarnUser> for Darn {
+    fn from(user: &DarnUser) -> Self {
+        user.0.clone()
     }
 }
 
-impl From<&DarNS> for Darn {
-    fn from(ns: &DarNS) -> Self {
-        Darn::new(&ns.0)
+pub struct DarnUser(Darn);
+
+impl Display for DarnUser {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.full_name())
+    }
+}
+
+impl Display for DarnRole {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.full_name())
+    }
+}
+
+impl From<&UserInfo> for DarnUser {
+    fn from(user: &UserInfo) -> Self {
+        DarnUser(Darn::new("user").new_child(&user.sub))
+    }
+}
+
+pub type DarnSubject = Darn;
+
+impl From<DarnRole> for DarnSubject {
+    fn from(role: DarnRole) -> Self {
+        role.0.clone()
+    }
+}
+
+
+impl From<DarnUser> for DarnSubject {
+    fn from(user: DarnUser) -> Self {
+        user.0.clone()
+    }
+}
+
+impl Deref for DarnUser {
+    type Target = Darn;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Deref for DarnRole {
+    type Target = Darn;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -52,10 +97,6 @@ impl Darn {
 
     pub fn new_child(&self, name: &str) -> Darn {
         Darn { parent: Some(Box::new(self.clone())), name: name.to_string() }
-    }
-
-    pub fn role(&self, role: &dyn IntoDarnWithContext) -> Darn {
-        role.to_darn(self)
     }
 }
 
