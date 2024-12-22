@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::debug_handler;
 use axum::extract::State;
 use axum::middleware::Next;
-use axum_core::__private::tracing::warn;
+use axum_core::__private::tracing::{info, warn};
 use axum_core::extract::Request;
 use axum_core::response::Response;
 use http::header;
@@ -11,7 +11,10 @@ use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
 use uuid::Uuid;
-use crate::{AppState, MaybeUserInfo, UserInfo};
+use crate::{AppState, MaybeUserInfo, UserInfo, USER_NS};
+use crate::auth::{IntoDarnWithContext, SITE_NS};
+use crate::auth::SiteRoles::{Admin, Guest, User};
+use crate::darn::Darn;
 
 pub struct KeycloakClient {
     pub admin: KeycloakAdmin,
@@ -52,7 +55,7 @@ pub async fn authn_keycloak_middleware(
 
     let maybe_token = request.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok());
     let mut user_info = UserInfo {
-        sub: "site:guest".to_string(),
+        sub: "guest".to_string(),
         preferred_username: "guest".to_string(),
         email: "".to_string(),
     };
@@ -63,7 +66,8 @@ pub async fn authn_keycloak_middleware(
         if let Ok(response) = client.get(url).bearer_auth(token).send().await {
             if response.status().is_success() {
                 user_info = response.json::<UserInfo>().await.unwrap();
-                check_first_login(&app, &user_info).await;
+
+                check_user_roles(&app, &user_info).await;
             }
         }
     }
@@ -76,29 +80,29 @@ pub async fn authn_keycloak_middleware(
 }
 
 // Rust function to check user login and assign 'user' role if first login
-pub async fn check_first_login(
+pub async fn check_user_roles<T: Into<Darn>>(
     app: &Arc<AppState>,
-    user: &UserInfo,
+    user: T,
 ) -> anyhow::Result<()> {
-    let user_uuid = Uuid::parse_str(&user.sub).expect("failed to parse user UUID");
-    let admin_uuid = Uuid::parse_str("6d93fb96-8dad-410e-880d-ed79ca568bc3").unwrap();
-
-    warn!("check first login in Casbin");
+    let user = &user.into();
+    let admins = [
+        USER_NS.new_child("6d93fb96-8dad-410e-880d-ed79ca568bc3")
+    ];
 
     // Check if the user has a role
-    let roles = app.casbin.get_roles_for_user(user).await;
-    println!("Current roles: {:?}", roles);
+    let roles = app.casbin.get_explicit_roles(&user).await;
+    info!("Current roles: {:?}", roles);
 
     if roles.is_empty() {
-        if user_uuid == admin_uuid {
-            println!("User is an admin; assigning 'site:admin' role");
+        if admins.contains(&user) {
+            info!("User is an admin; assigning 'site:admin' role");
             app.casbin
-                .add_role_for_user(user, "site:admin")
+                .add_subj_role(user, &SITE_NS.role(&Admin))
                 .await?;
         } else {
-            println!("User is not an admin; assigning 'site:user' role");
+            info!("User is not an admin; assigning 'site:user' role");
             app.casbin
-                .add_role_for_user(user, "site:user")
+                .add_subj_role(user, &SITE_NS.role(&User))
                 .await?;
         }
     } else {

@@ -63,7 +63,7 @@ pub async fn add_game_roles(casbin: &Casbin, game_darn: &Darn) -> &'static [Game
     ];
 
     apply_role_policies(casbin, game_darn, roles).await;
-    casbin.add_role_subset(Collaborator.to_darn(game_darn), Contributor.to_darn(game_darn)).await;
+    casbin.add_subj_role(&Collaborator.to_darn(game_darn), &Contributor.to_darn(game_darn)).await;
 
     roles
 }

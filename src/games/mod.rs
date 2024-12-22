@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 
+pub const GAME_NS: DarNS = DarNS("game");
+
 #[derive(Debug, Deserialize, ToSchema)]
 
 pub struct GameEntryCreate {
@@ -81,8 +83,8 @@ use tokio::sync::RwLock;
 use tracing_subscriber::fmt::format;
 use utoipa::ToSchema;
 use crate::{AppState, MaybeUserInfo, UserInfo};
-use crate::auth::IntoDarnWithContext;
-use crate::darn::Darn;
+use crate::auth::{IntoDarnWithContext, SITE_NS};
+use crate::darn::{DarNS, Darn};
 use crate::games::game_roles::{add_game_roles, GameRoles};
 use crate::games::game_roles::GameRoles::Author;
 
@@ -101,22 +103,21 @@ pub async fn create_game(
     Extension(user_info): Extension<UserInfo>,
     Json(game_input): Json<GameEntryCreate>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
-    // 1. Authorization: check if user can "create" a "game"
+    let user_darn = &user_info.clone().into();
+
     let can_create = app.casbin
-        .enforce_user_action(&user_info, "create_game", "site")
+        .enforce_action(user_darn, "create_game", &SITE_NS.into())
         .await;
 
     if !can_create {
-        let roles = app.casbin.get_implicit_roles_for_user(&user_info).await;
-        let perms = app.casbin.get_implicit_permissions_for_user(&user_info).await;
+        let roles = app.casbin.get_implicit_roles(&user_darn).await;
+        let perms = app.casbin.get_implicit_permissions(&user_darn).await;
         eprintln!("User {} roles: {:?}", user_info.sub, roles);
         eprintln!("User {} perms: {:?}", user_info.sub, perms);
 
         return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
     }
 
-    // 3. Insert into the database
-    //    `author` could store user.sub or user.preferred_username, whichever your schema expects
     let new_id = Uuid::new_v4();
     let new_row = sqlx::query_as!(
         GameEntryData,
@@ -145,7 +146,6 @@ pub async fn create_game(
             (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
         })?;
 
-    // 4. Construct the response metadata (omitting the ROM)
     let metadata = GameEntryMetadata {
         game_id: new_row.game_id,
         game_name: new_row.game_name,
@@ -155,10 +155,10 @@ pub async fn create_game(
         updated_at: new_row.updated_at,
     };
 
-    let game_parent = Darn::new("game");
-    let game_darn = game_parent.new_child(&metadata.game_id.to_string());
-    let roles = add_game_roles(&app.casbin, &game_darn).await;
-    app.casbin.add_role_for_user(&user_info, &Author.to_darn(&game_darn).to_string()).await.expect("Failed to add role");
+    let game_darn = &GAME_NS.new_child(&metadata.game_id.to_string());
+    let roles = add_game_roles(&app.casbin, game_darn).await;
+    let author = &(&user_info).into();
+    app.casbin.add_subj_role(author, &game_darn.role(&Author)).await.expect("Failed to add role");
 
     // 5. Return 201 Created with the metadata
     Ok((StatusCode::CREATED, Json(metadata)))
