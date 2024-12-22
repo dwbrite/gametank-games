@@ -103,10 +103,10 @@ pub async fn create_game(
     Extension(user_info): Extension<UserInfo>,
     Json(game_input): Json<GameEntryCreate>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
-    let user_darn = &user_info.clone().into();
+    let user_darn: Darn = (&user_info).into();
 
     let can_create = app.casbin
-        .enforce_action(user_darn, "create_game", &SITE_NS.into())
+        .enforce_action(&user_darn, "create_game", SITE_NS)
         .await;
 
     if !can_create {
@@ -157,8 +157,7 @@ pub async fn create_game(
 
     let game_darn = &GAME_NS.new_child(&metadata.game_id.to_string());
     let roles = add_game_roles(&app.casbin, game_darn).await;
-    let author = &(&user_info).into();
-    app.casbin.add_subj_role(author, &game_darn.role(&Author)).await.expect("Failed to add role");
+    app.casbin.add_subj_role(&user_info, &game_darn.role(&Author)).await.expect("Failed to add role");
 
     // 5. Return 201 Created with the metadata
     Ok((StatusCode::CREATED, Json(metadata)))

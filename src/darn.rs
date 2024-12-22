@@ -59,6 +59,12 @@ impl Darn {
     }
 }
 
+impl From<&Darn> for Darn {
+    fn from(value: &Darn) -> Self {
+        value.clone()
+    }
+}
+
 
 impl Display for Darn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

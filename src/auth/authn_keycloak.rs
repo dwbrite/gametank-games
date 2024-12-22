@@ -90,7 +90,7 @@ pub async fn check_user_roles<T: Into<Darn>>(
     ];
 
     // Check if the user has a role
-    let roles = app.casbin.get_explicit_roles(&user).await;
+    let roles = app.casbin.get_explicit_roles(user).await;
     info!("Current roles: {:?}", roles);
 
     if roles.is_empty() {

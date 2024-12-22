@@ -92,12 +92,6 @@ impl From<&UserInfo> for Darn {
     }
 }
 
-impl From<UserInfo> for Darn {
-    fn from(user: UserInfo) -> Self {
-        USER_NS.new_child(&user.sub)
-    }
-}
-
 pub type MaybeUserInfo = Option<UserInfo>;
 
 #[debug_handler]

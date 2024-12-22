@@ -54,7 +54,7 @@ impl HasPermissions<GamePermissions> for GameRoles {
     }
 }
 
-pub async fn add_game_roles(casbin: &Casbin, game_darn: &Darn) -> &'static [GameRoles] {
+pub async fn add_game_roles<D: Into<Darn>>(casbin: &Casbin, game_darn: D) -> &'static [GameRoles] {
     let roles = &[
         GameRoles::Author,
         GameRoles::Collaborator,
@@ -62,8 +62,10 @@ pub async fn add_game_roles(casbin: &Casbin, game_darn: &Darn) -> &'static [Game
         GameRoles::Previewer,
     ];
 
-    apply_role_policies(casbin, game_darn, roles).await;
-    casbin.add_subj_role(&Collaborator.to_darn(game_darn), &Contributor.to_darn(game_darn)).await;
+    let game_darn = game_darn.into();
+
+    apply_role_policies(casbin, &game_darn, roles).await;
+    casbin.add_subj_role(&Collaborator.to_darn(&game_darn), &Contributor.to_darn(&game_darn)).await;
 
     roles
 }

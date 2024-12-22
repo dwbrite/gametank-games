@@ -49,7 +49,7 @@ impl HasPermissions<SitePermissions> for SiteRoles {
     }
 }
 
-pub async fn add_site_roles(casbin: &Casbin, site_darn: &Darn) -> &'static [SiteRoles] {
+pub async fn add_site_roles<D: Into<Darn>>(casbin: &Casbin, site_darn: D) -> &'static [SiteRoles] {
     let roles = &[
         Admin,
         SrModerator,
@@ -57,6 +57,8 @@ pub async fn add_site_roles(casbin: &Casbin, site_darn: &Darn) -> &'static [Site
         User,
         Guest
     ];
+
+    let site_darn = &site_darn.into();
 
     apply_role_policies(casbin, site_darn, roles).await;
     casbin.add_subj_role(&SrModerator.to_darn(site_darn), &Moderator.to_darn(site_darn)).await;
