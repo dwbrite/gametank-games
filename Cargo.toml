@@ -31,5 +31,8 @@ itertools = "0.13.0"
 chrono = { version = "0.4.38", features = ["serde"] }
 anyhow = "1.0.94"
 
+strum = "0.26.3"
+strum_macros = "0.26.4"
+
 [build-dependencies]
 npm_rs = "1.0.0"

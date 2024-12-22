@@ -1,17 +1,53 @@
+use std::fmt::Display;
 use std::sync::Arc;
 use axum_core::__private::tracing::error;
+use axum_core::__private::tracing::log::warn;
 use itertools::Itertools;
 use sqlx_adapter::SqlxAdapter;
 use tokio::sync::Mutex;
 use crate::{MaybeUserInfo, UserInfo};
 use casbin::{CoreApi, DefaultModel, Enforcer, Error as CasbinError, MgmtApi, RbacApi, Result as CasbinResult};
 use casbin::error::RbacError;
+use crate::auth::site_roles::add_site_roles;
+use crate::darn::Darn;
 
 pub struct Casbin {
     enforcer: Mutex<Enforcer>,
 }
 
+pub trait HasPermissions<P> where P: Display {
+    fn permissions(&self) -> Vec<P>;
+}
+
+pub trait IntoDarnWithContext: Display {
+    fn to_darn(&self, parent: &Darn) -> Darn {
+        parent.new_child(&self.to_string())
+    }
+}
+
+pub async fn apply_role_policies<'a, T, P>(
+    casbin: &'a Casbin,
+    obj_darn: &'a Darn,
+    roles: &'static [T]
+) where
+    T: IntoDarnWithContext + HasPermissions<P>,
+    P: Display + 'a + 'static
+{
+    for role in roles {
+        for action in role.permissions() {
+            let role_darn = &role.to_darn(&obj_darn);
+            let action = &action.to_string();
+            match casbin.add_allow_policy(role_darn, action, obj_darn).await {
+                Ok(_) => {}
+                Err(_) => { warn!("Failed to apply casbin policy on role {}. (This role has likely been initialized already? Maybe I should delete the roles first??? sus.)", role); }
+            }
+        }
+    }
+}
+
+
 pub async fn init_casbin(database_url: String) -> Casbin {
+    println!("init_casbin");
     let model = DefaultModel::from_str(include_str!("rbac_model.conf")).await.unwrap();
     let adapter = SqlxAdapter::new(database_url, 10).await.unwrap();
     let mut enforcer = Mutex::new(Enforcer::new(model, adapter).await.unwrap());
@@ -20,9 +56,8 @@ pub async fn init_casbin(database_url: String) -> Casbin {
         enforcer,
     };
 
-    // TODO: default roles
-    // we explicitly ignore these errors
-    let _ = casbin.add_allow_policy("user", "upload", "game").await;
+    add_site_roles(&casbin, &Darn::new("site")).await;
+
     casbin
 }
 
@@ -55,12 +90,15 @@ impl Casbin {
     /// e.g. ("game:abc:author", "*", "game:abc").
     pub async fn add_allow_policy(
         &self,
-        role: &str,
-        action: &str,
-        object: &str
+        role: &Darn,
+        action: &str, // TODO: maybe encode more about Actions later ://
+        object: &Darn,
     ) -> CasbinResult<bool> {
+        let role = role.to_string();
+        let action = action.to_string();
+        let object = object.to_string();
         let mut guard = self.enforcer.lock().await;
-        guard.add_policy(vec![role, action, object, "allow"].into_iter().map_into().collect::<Vec<String>>()).await
+        guard.add_policy(vec![role, action, object, "allow".to_string()]).await
     }
 
     /// Enforce that the *current* user can `action` a `resource`.
@@ -108,5 +146,9 @@ impl Casbin {
         guard.get_implicit_permissions_for_user(user_id, None)
         // Depending on your policy_definition, you might have
         // (sub, act, obj) or (sub, act, obj, eft). Adjust your tuple as needed.
+    }
+
+    pub async fn add_role_subset(&self, this: Darn, is_also_a: Darn) {
+        self.enforcer.lock().await.add_grouping_policy(vec![this.to_string(), is_also_a.to_string()]);
     }
 }

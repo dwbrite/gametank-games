@@ -1,3 +1,5 @@
+mod game_roles;
+
 use std::sync::Arc;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
@@ -79,6 +81,10 @@ use tokio::sync::RwLock;
 use tracing_subscriber::fmt::format;
 use utoipa::ToSchema;
 use crate::{AppState, MaybeUserInfo, UserInfo};
+use crate::auth::IntoDarnWithContext;
+use crate::darn::Darn;
+use crate::games::game_roles::{add_game_roles, GameRoles};
+use crate::games::game_roles::GameRoles::Author;
 
 #[utoipa::path(
     post,
@@ -97,7 +103,7 @@ pub async fn create_game(
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
     // 1. Authorization: check if user can "create" a "game"
     let can_create = app.casbin
-        .enforce_user_action(&user_info, "upload", "game")
+        .enforce_user_action(&user_info, "create_game", "site")
         .await;
 
     if !can_create {
@@ -149,10 +155,10 @@ pub async fn create_game(
         updated_at: new_row.updated_at,
     };
 
-    let game_darn = format!("game:{}", new_row.game_id);
-    let new_role = format!("{}:author", game_darn);
-    let _ = app.casbin.add_role_for_user(&user_info, &new_role).await;
-    let _ = app.casbin.add_allow_policy(&new_role, "*", &game_darn).await;
+    let game_parent = Darn::new("game");
+    let game_darn = game_parent.new_child(&metadata.game_id.to_string());
+    let roles = add_game_roles(&app.casbin, &game_darn).await;
+    app.casbin.add_role_for_user(&user_info, &Author.to_darn(&game_darn).to_string()).await.expect("Failed to add role");
 
     // 5. Return 201 Created with the metadata
     Ok((StatusCode::CREATED, Json(metadata)))

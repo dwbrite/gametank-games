@@ -52,7 +52,7 @@ pub async fn authn_keycloak_middleware(
 
     let maybe_token = request.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok());
     let mut user_info = UserInfo {
-        sub: "guest".to_string(),
+        sub: "site:guest".to_string(),
         preferred_username: "guest".to_string(),
         email: "".to_string(),
     };
@@ -78,32 +78,31 @@ pub async fn authn_keycloak_middleware(
 // Rust function to check user login and assign 'user' role if first login
 pub async fn check_first_login(
     app: &Arc<AppState>,
-    user: &UserInfo
+    user: &UserInfo,
 ) -> anyhow::Result<()> {
-    let user_uuid =  Uuid::parse_str(&user.sub).expect("failed to parse user uuid");
+    let user_uuid = Uuid::parse_str(&user.sub).expect("failed to parse user UUID");
+    let admin_uuid = Uuid::parse_str("6d93fb96-8dad-410e-880d-ed79ca568bc3").unwrap();
 
-    warn!("check first login");
-    let exists = sqlx::query_scalar!(
-        "SELECT EXISTS (SELECT 1 FROM user_login WHERE user_id = $1)",
-        user_uuid
-    )
-        .fetch_one(&app.pg_pool)
-        .await?;
+    warn!("check first login in Casbin");
 
-    println!("exists: {:?}", exists);
-    if !exists.unwrap_or(false) {
-        println!("no user info found; inserting entry");
-        // First login: insert into user_login and assign 'user' role
-        sqlx::query!(
-            "INSERT INTO user_login (user_id, last_login) VALUES ($1, NOW())",
-            user_uuid
-        )
-            .execute(&app.pg_pool)
-            .await?;
+    // Check if the user has a role
+    let roles = app.casbin.get_roles_for_user(user).await;
+    println!("Current roles: {:?}", roles);
 
-        // Add user to 'user' role in Casbin
-        println!("inserted entry; adding user to user group");
-        app.casbin.add_role_for_user(&user, "user").await?;
+    if roles.is_empty() {
+        if user_uuid == admin_uuid {
+            println!("User is an admin; assigning 'site:admin' role");
+            app.casbin
+                .add_role_for_user(user, "site:admin")
+                .await?;
+        } else {
+            println!("User is not an admin; assigning 'site:user' role");
+            app.casbin
+                .add_role_for_user(user, "site:user")
+                .await?;
+        }
+    } else {
+        println!("User already has roles; no changes made");
     }
 
     Ok(())
