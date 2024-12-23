@@ -1,20 +1,17 @@
 use std::env;
 use std::sync::Arc;
-use axum::debug_handler;
 use axum::extract::State;
 use axum::middleware::Next;
-use axum_core::__private::tracing::{info, warn};
+use axum_core::__private::tracing::info;
 use axum_core::extract::Request;
 use axum_core::response::Response;
 use http::header;
 use keycloak::{KeycloakAdmin, KeycloakAdminToken};
-use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
-use uuid::Uuid;
 use crate::{AppState, KeycloakUserInfo};
-use crate::auth::{RoleMarker, DefaultNamespace, SiteRoles};
+use crate::auth::{DefaultNamespace, SiteRoles};
 // use crate::auth::SiteRoles::{Admin, Guest, User};
-use crate::darn::{Darn, DarnUser};
+use crate::darn::DarnUser;
 
 pub struct KeycloakClient {
     pub admin: KeycloakAdmin,

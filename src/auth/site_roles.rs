@@ -1,15 +1,10 @@
 use std::collections::HashMap;
-use std::fmt::Display;
-use keycloak::types::Permission;
 use maplit::hashmap;
-use strum::IntoEnumIterator;
-use strum_macros::{Display, ToString};
-use tracing_subscriber::fmt::format;
-use uuid::Uuid;
-use crate::auth::{Casbin, PermissionMarker, RoleMarker, DefaultNamespace};
+use strum_macros::Display;
+use crate::auth::{PermissionMarker, RoleMarker, DefaultNamespace};
 use crate::auth::site_roles::SitePermissions::*;
 use crate::auth::site_roles::SiteRoles::*;
-use crate::darn::{Darn, DarnRole};
+use crate::darn::Darn;
 
 #[derive(Display, Eq, PartialEq, Hash, Copy, Clone)]
 #[strum(serialize_all = "snake_case")]

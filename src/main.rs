@@ -4,7 +4,6 @@ mod auth;
 mod darn;
 
 use std::env;
-use std::fmt::{Display, Formatter};
 use tokio;
 use axum::{debug_handler, routing::get, Extension, Json, Router};
 use axum::http::StatusCode;
@@ -13,16 +12,14 @@ use axum::routing::{get_service, post};
 use sqlx::{migrate, PgPool};
 use std::sync::Arc;
 use axum::extract::{Request, State};
-use casbin::{CoreApi, MgmtApi, RbacApi};
+use casbin::CoreApi;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
-use strum_macros::Display;
-use utoipa::{OpenApi, ToSchema};
-use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, RoleMarker, KeycloakClient};
-use crate::darn::{Darn};
+use utoipa::ToSchema;
+use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
 use crate::games::create_game;
 // #[derive(OpenApi)]
 // #[openapi(paths(upload_game), components(schemas(GameEntry)))]

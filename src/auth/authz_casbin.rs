@@ -1,16 +1,7 @@
-use std::collections::HashMap;
-use std::fmt::Display;
-use std::hash::Hash;
-use std::sync::Arc;
-use axum_core::__private::tracing::{debug, error};
 use axum_core::__private::tracing::log::warn;
-use itertools::Itertools;
 use sqlx_adapter::SqlxAdapter;
 use tokio::sync::Mutex;
-use casbin::{CoreApi, DefaultModel, Enforcer, Error as CasbinError, MgmtApi, RbacApi, Result as CasbinResult};
-use casbin::error::RbacError;
-use keycloak::types::Permission;
-use strum::IntoEnumIterator;
+use casbin::{CoreApi, DefaultModel, Enforcer, MgmtApi, RbacApi, Result as CasbinResult};
 use crate::auth::{PermissionMarker, RoleMarker, SiteRoles};
 use crate::darn::{Darn, DarnRole, DarnSubject};
 
@@ -21,7 +12,7 @@ pub struct Casbin {
 pub async fn init_casbin(database_url: String) -> Casbin {
     let model = DefaultModel::from_str(include_str!("rbac_model.conf")).await.unwrap();
     let adapter = SqlxAdapter::new(database_url, 10).await.unwrap();
-    let mut enforcer = Mutex::new(Enforcer::new(model, adapter).await.unwrap());
+    let enforcer = Mutex::new(Enforcer::new(model, adapter).await.unwrap());
 
     let casbin = Casbin {
         enforcer,
