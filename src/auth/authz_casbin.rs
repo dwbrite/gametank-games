@@ -1,16 +1,18 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::hash::Hash;
 use std::sync::Arc;
 use axum_core::__private::tracing::{debug, error};
 use axum_core::__private::tracing::log::warn;
 use itertools::Itertools;
 use sqlx_adapter::SqlxAdapter;
 use tokio::sync::Mutex;
-use crate::{MaybeUserInfo};
+use crate::MaybeUserInfo;
 use casbin::{CoreApi, DefaultModel, Enforcer, Error as CasbinError, MgmtApi, RbacApi, Result as CasbinResult};
 use casbin::error::RbacError;
 use keycloak::types::Permission;
 use strum::IntoEnumIterator;
+use crate::auth::{RoleMarker, SiteRoles};
 use crate::darn::{Darn, DarnRole, DarnSubject};
 
 // TODO: update casbin functions to use multiple generics for Into<Darn> where there are multiple parameters <D1, D2>
@@ -18,66 +20,6 @@ use crate::darn::{Darn, DarnRole, DarnSubject};
 pub struct Casbin {
     enforcer: Mutex<Enforcer>,
 }
-
-pub trait PermissionMarker: Display {}
-
-#[derive(Debug)]
-pub struct Permissions<Permission: PermissionMarker, Role> {
-    /// List of permissions assigned directly or through inheritance.
-    pub allowed_actions: HashMap<Role, Vec<Permission>>,
-
-    /// Mapping of roles to their immediate super roles.
-    pub inheritance: Vec<(Role, Role)>,
-}
-
-pub trait RoleMarker: Display {
-    type RolePermission: PermissionMarker;
-
-    /// Returns a list of permissions associated directly with the role.
-    fn permissions() -> Permissions<Self::RolePermission, Self>;
-
-    /// Converts the role into a DarnRole based on the provided context.
-    fn to_darn_role(&self, ctx: &Darn) -> DarnRole {
-        DarnRole::from_context(&self.to_string(), &ctx)
-    }
-
-    /// Adds roles to an object using Casbin.
-    async fn add_permissions_for_object(casbin: &Casbin, object: impl Into<Darn>, roles: Vec<Self>) {
-        let obj = &object.into();
-
-        for role in roles {
-            let object_role = &role.to_darn_role(obj);
-            for action in role.permissions().allowed_actions {
-                match casbin.add_allow_policy(object_role, &action.to_string(), obj).await {
-                    Ok(_) => {}
-                    Err(_) => { warn!("Failed to apply casbin policy on role {}. (This role has likely been initialized already? Maybe I should delete the roles first??? sus.)", role); }
-                }
-            }
-        }
-    }
-}
-
-//
-// pub async fn apply_role_policies<Permissions, Roles>(casbin: &Casbin, obj: impl Into<Darn>, roles: Vec<Roles>)
-// {
-//     let obj = &obj.into();
-//
-//     for role in roles {
-//         for action in role.permissions().permissions {
-//             let role_darn = &role.to_darn_role(obj);
-//             let action = &action.to_string();
-//             match casbin.add_allow_policy(role_darn, action, obj).await {
-//                 Ok(_) => {}
-//                 Err(_) => { warn!("Failed to apply casbin policy on role {}. (This role has likely been initialized already? Maybe I should delete the roles first??? sus.)", role); }
-//             }
-//         }
-//
-//         for inherited_role in role.permissions().inheritance {
-//
-//         }
-//     }
-// }
-
 
 pub async fn init_casbin(database_url: String) -> Casbin {
     println!("init_casbin");
@@ -89,9 +31,8 @@ pub async fn init_casbin(database_url: String) -> Casbin {
         enforcer,
     };
 
-
-    // Todo; dot he new implementation of thisssssssssss
-    // add_site_roles(&casbin, SITE_NS).await;
+    println!("made it here!");
+    SiteRoles::create_roles_in_namespace(&casbin, Darn::new("site")).await;
 
     casbin
 }

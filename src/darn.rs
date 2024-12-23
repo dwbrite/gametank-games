@@ -23,6 +23,7 @@ impl From<&DarnUser> for Darn {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct DarnUser(Darn);
 
 impl Display for DarnUser {

@@ -101,12 +101,15 @@ pub async fn create_game(
     Extension(user_info): Extension<UserInfo>,
     Json(game_input): Json<GameEntryCreate>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
-    // let user_darn: Darn = (&user_info).into();
 
+    // TODO: here
+    // let user_darn: Darn = (&user_info).into();
+    //
+    // TODO: enforce_action should take any PermissionMarker type?
     // let can_create = app.casbin
     //     .enforce_action(&user_darn, "create_game", SITE_NS)
     //     .await;
-
+    //
     // if !can_create {
     //     let roles = app.casbin.get_implicit_roles(&user_darn).await;
     //     let perms = app.casbin.get_implicit_permissions(&user_darn).await;
@@ -153,6 +156,8 @@ pub async fn create_game(
         updated_at: new_row.updated_at,
     };
 
+    // TODO: here
+    //
     // let game_darn = &GAME_NS.new_child(&metadata.game_id.to_string());
     // let roles = add_game_roles(&app.casbin, game_darn).await;
     // app.casbin.add_subj_role(&user_info, &game_darn.role(&Author)).await.expect("Failed to add role");

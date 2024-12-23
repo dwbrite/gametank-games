@@ -12,7 +12,7 @@ use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
 use uuid::Uuid;
 use crate::{AppState, MaybeUserInfo, UserInfo};
-use crate::auth::{RoleMarker};
+use crate::auth::{RoleMarker, DefaultNamespace, SiteRoles};
 // use crate::auth::SiteRoles::{Admin, Guest, User};
 use crate::darn::{Darn, DarnUser};
 
@@ -66,9 +66,7 @@ pub async fn authn_keycloak_middleware(
         if let Ok(response) = client.get(url).bearer_auth(token).send().await {
             if response.status().is_success() {
                 user_info = response.json::<UserInfo>().await.unwrap(); // TODO: we unwrap?!?!?!?
-                let user = DarnUser::from(&user_info);
-
-                check_user_roles(&app, &user).await;
+                check_user_roles(&app, &user_info).await;
             }
         }
     }
@@ -81,30 +79,35 @@ pub async fn authn_keycloak_middleware(
 }
 
 // Rust function to check user login and assign 'user' role if first login
-pub async fn check_user_roles<T: Into<Darn>>(
+pub async fn check_user_roles(
     app: &Arc<AppState>,
-    user: T,
+    user: &UserInfo,
 ) -> anyhow::Result<()> {
-    let user = &user.into();
     let admins = [
-        // USER_NS.new_child("6d93fb96-8dad-410e-880d-ed79ca568bc3")
+        DarnUser::from(&UserInfo {
+            sub: "6d93fb96-8dad-410e-880d-ed79ca568bc3".to_string(),
+            preferred_username: "".to_string(), // ignored
+            email: "".to_string(), // ignored
+        })
     ];
+
+    let user = &DarnUser::from(user);
 
     // Check if the user has a role
     let roles = app.casbin.get_explicit_roles(user).await;
     info!("Current roles: {:?}", roles);
 
     if roles.is_empty() {
-        if admins.contains(&user) {
+        if admins.contains(user) {
             info!("User is an admin; assigning 'site:admin' role");
-            // app.casbin
-            //     .add_subj_role(user, &SITE_NS.role(&Admin))
-            //     .await?;
+            app.casbin
+                .add_subj_role(user, SiteRoles::Admin.to_darn_role())
+                .await?;
         } else {
             info!("User is not an admin; assigning 'site:user' role");
-            // app.casbin
-            //     .add_subj_role(user, &SITE_NS.role(&User))
-            //     .await?;
+            app.casbin
+                .add_subj_role(user, SiteRoles::User.to_darn_role())
+                .await?;
         }
     } else {
         println!("User already has roles; no changes made");
