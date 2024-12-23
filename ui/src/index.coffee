@@ -87,6 +87,7 @@ Auth =
       <button onclick={Auth.logout} disabled={!authenticated}>Logout</button>
       <button onclick={Auth.api.load_user_info}>User Info</button>
       {if authenticated then <button onclick={Auth.api.create_resource} disabled={!authenticated}>create game</button>}
+      <button onclick={Auth.api.create_resource}>create game</button>
     </div>
 
 

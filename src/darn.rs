@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use strum_macros::Display;
 use crate::auth::RoleMarker;
-use crate::UserInfo;
+use crate::KeycloakUserInfo;
 
 /// Devin's abstract resource names
 
@@ -38,8 +38,8 @@ impl Display for DarnRole {
     }
 }
 
-impl From<&UserInfo> for DarnUser {
-    fn from(user: &UserInfo) -> Self {
+impl From<&KeycloakUserInfo> for DarnUser {
+    fn from(user: &KeycloakUserInfo) -> Self {
         DarnUser(Darn::new("user").new_child(&user.sub))
     }
 }

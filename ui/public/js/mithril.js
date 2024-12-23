@@ -1605,7 +1605,7 @@
         function fireAsync() {
             if (!scheduled) {
                 scheduled = true
-                // TODO: just do `mountRedraw00.redraw1()` here and elide the timer
+                // MithrilJSTODO: just do `mountRedraw00.redraw1()` here and elide the timer
                 // dependency. Note that this will muck with tests a *lot*, so it's
                 // not as easy of a change as it sounds.
                 callAsync(resolveRoute)

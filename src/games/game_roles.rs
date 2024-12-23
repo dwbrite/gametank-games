@@ -1,6 +1,7 @@
+use std::collections::HashMap;
 use maplit::hashmap;
 use strum_macros::Display;
-use crate::auth::{PermissionMarker, Permissions, RoleMarker};
+use crate::auth::{PermissionMarker, RoleMarker};
 use crate::games::game_roles::GameRoles::*;
 use crate::games::game_roles::GamePermissions::*;
 
@@ -23,7 +24,7 @@ pub enum GameRoles {
 }
 
 
-#[derive(Display)]
+#[derive(Display, Copy, Clone)]
 #[strum(serialize_all = "snake_case")]
 pub enum GamePermissions {
     #[strum(serialize = "*")]
@@ -40,23 +41,19 @@ impl PermissionMarker for GamePermissions {}
 
 impl RoleMarker for GameRoles {
     type RolePermission = GamePermissions;
-
-    fn permissions() -> Permissions<Self::RolePermission, Self> {
-        let allowed_actions = hashmap!{
+    fn allowed_actions() -> HashMap<Self, Vec<Self::RolePermission>> {
+        hashmap!{
             Author => vec![All],
             Collaborator => vec![ModifyCollaborators, ModifyContributors],
             Contributor => vec![ModifyContributors, Patch, View],
             Previewer => vec![View],
-        };
+        }
+    }
 
-        let inheritance = vec![
+    fn inheritance() -> Vec<(Self, Self)> {
+        vec![
             (Author, Collaborator),
             (Collaborator, Contributor),
-        ];
-
-        Permissions {
-            allowed_actions,
-            inheritance
-        }
+        ]
     }
 }

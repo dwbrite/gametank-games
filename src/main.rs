@@ -78,18 +78,16 @@ async fn main() {
 }
 
 #[derive(ToSchema, Serialize, Deserialize, Debug, Clone)]
-pub struct UserInfo {
-    pub sub: String, // TODO: don't rename :))
+pub struct KeycloakUserInfo {
+    pub sub: String,
     pub preferred_username: String,
     pub email: String,
 }
 
-pub type MaybeUserInfo = Option<UserInfo>;
-
 #[debug_handler]
 async fn get_user_info(
     State(app): State<Arc<AppState>>,
-    Extension(user_info): Extension<UserInfo>,
+    Extension(user_info): Extension<KeycloakUserInfo>,
     request: Request,
 ) -> impl IntoResponse {
 

@@ -80,11 +80,15 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing_subscriber::fmt::format;
 use utoipa::ToSchema;
-use crate::{AppState, MaybeUserInfo, UserInfo};
-use crate::auth::{RoleMarker};
-use crate::darn::{Darn};
+use crate::{AppState, KeycloakUserInfo};
+use crate::auth::{DefaultNamespace, RoleMarker, SiteRoles};
+use crate::auth::SitePermissions::CreateGame;
+use crate::darn::{Darn, DarnUser};
+use crate::games::game_roles::GameRoles;
 // use crate::games::game_roles::{add_game_roles, GameRoles};
 // use crate::games::game_roles::GameRoles::Author;
+
+const GAME_NS: &'static str = "game";
 
 #[utoipa::path(
     post,
@@ -98,26 +102,24 @@ use crate::darn::{Darn};
 )]
 pub async fn create_game(
     State(app): State<Arc<AppState>>,
-    Extension(user_info): Extension<UserInfo>,
+    Extension(user_info): Extension<KeycloakUserInfo>,
     Json(game_input): Json<GameEntryCreate>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
 
-    // TODO: here
-    // let user_darn: Darn = (&user_info).into();
-    //
-    // TODO: enforce_action should take any PermissionMarker type?
-    // let can_create = app.casbin
-    //     .enforce_action(&user_darn, "create_game", SITE_NS)
-    //     .await;
-    //
-    // if !can_create {
-    //     let roles = app.casbin.get_implicit_roles(&user_darn).await;
-    //     let perms = app.casbin.get_implicit_permissions(&user_darn).await;
-    //     eprintln!("User {} roles: {:?}", user_info.sub, roles);
-    //     eprintln!("User {} perms: {:?}", user_info.sub, perms);
-    //
-    //     return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
-    // }
+    let user_darn: DarnUser = DarnUser::from(&user_info);
+
+    let can_create = app.casbin
+        .enforce_action(&user_darn, CreateGame, SiteRoles::default_namespace())
+        .await;
+
+    if !can_create {
+        let roles = app.casbin.get_implicit_roles(&user_darn).await;
+        let perms = app.casbin.get_implicit_permissions(&user_darn).await;
+        eprintln!("User {} roles: {:?}", user_info.sub, roles);
+        eprintln!("User {} perms: {:?}", user_info.sub, perms);
+
+        return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
+    }
 
     let new_id = Uuid::new_v4();
     let new_row = sqlx::query_as!(
@@ -156,11 +158,8 @@ pub async fn create_game(
         updated_at: new_row.updated_at,
     };
 
-    // TODO: here
-    //
-    // let game_darn = &GAME_NS.new_child(&metadata.game_id.to_string());
-    // let roles = add_game_roles(&app.casbin, game_darn).await;
-    // app.casbin.add_subj_role(&user_info, &game_darn.role(&Author)).await.expect("Failed to add role");
+    let game_darn = Darn::new(GAME_NS).new_child(&metadata.game_id.to_string());
+    GameRoles::create_roles_in_namespace(&app.casbin, game_darn).await;
 
     // 5. Return 201 Created with the metadata
     Ok((StatusCode::CREATED, Json(metadata)))

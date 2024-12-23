@@ -11,7 +11,7 @@ use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use keycloak::types::ResourceRepresentation;
 use reqwest::Client;
 use uuid::Uuid;
-use crate::{AppState, MaybeUserInfo, UserInfo};
+use crate::{AppState, KeycloakUserInfo};
 use crate::auth::{RoleMarker, DefaultNamespace, SiteRoles};
 // use crate::auth::SiteRoles::{Admin, Guest, User};
 use crate::darn::{Darn, DarnUser};
@@ -50,11 +50,11 @@ pub async fn authn_keycloak_middleware(
     next: Next,
 ) -> Response {
     let client = Client::new();
-    // TODO: update url
-    let url = "https://keycloak.dwbrite.com/realms/gametank-games/protocol/openid-connect/userinfo";
+
+    let client_url: String = env::var("KEYCLOAK_CLIENT_URL").unwrap().into();
 
     let maybe_token = request.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok());
-    let mut user_info = UserInfo {
+    let mut user_info = KeycloakUserInfo {
         sub: "guest".to_string(),
         preferred_username: "guest".to_string(),
         email: "".to_string(),
@@ -63,9 +63,10 @@ pub async fn authn_keycloak_middleware(
 
     if let Some(token) = maybe_token {
         let token = token.trim_start_matches("Bearer ").to_string();
-        if let Ok(response) = client.get(url).bearer_auth(token).send().await {
+        if let Ok(response) = client.get(client_url).bearer_auth(token).send().await {
             if response.status().is_success() {
-                user_info = response.json::<UserInfo>().await.unwrap(); // TODO: we unwrap?!?!?!?
+                // TODO: make this an error
+                user_info = response.json::<KeycloakUserInfo>().await.expect("Successful response from keycloak implies we get UserInfo. If this isn't true, then, fuck me I guess.");
                 check_user_roles(&app, &user_info).await;
             }
         }
@@ -81,10 +82,10 @@ pub async fn authn_keycloak_middleware(
 // Rust function to check user login and assign 'user' role if first login
 pub async fn check_user_roles(
     app: &Arc<AppState>,
-    user: &UserInfo,
+    user: &KeycloakUserInfo,
 ) -> anyhow::Result<()> {
     let admins = [
-        DarnUser::from(&UserInfo {
+        DarnUser::from(&KeycloakUserInfo {
             sub: "6d93fb96-8dad-410e-880d-ed79ca568bc3".to_string(),
             preferred_username: "".to_string(), // ignored
             email: "".to_string(), // ignored

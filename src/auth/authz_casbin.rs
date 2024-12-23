@@ -7,15 +7,12 @@ use axum_core::__private::tracing::log::warn;
 use itertools::Itertools;
 use sqlx_adapter::SqlxAdapter;
 use tokio::sync::Mutex;
-use crate::MaybeUserInfo;
 use casbin::{CoreApi, DefaultModel, Enforcer, Error as CasbinError, MgmtApi, RbacApi, Result as CasbinResult};
 use casbin::error::RbacError;
 use keycloak::types::Permission;
 use strum::IntoEnumIterator;
-use crate::auth::{RoleMarker, SiteRoles};
+use crate::auth::{PermissionMarker, RoleMarker, SiteRoles};
 use crate::darn::{Darn, DarnRole, DarnSubject};
-
-// TODO: update casbin functions to use multiple generics for Into<Darn> where there are multiple parameters <D1, D2>
 
 pub struct Casbin {
     enforcer: Mutex<Enforcer>,
@@ -66,7 +63,7 @@ impl Casbin {
     pub async fn add_allow_policy(
         &self,
         role: &DarnRole,
-        action: &str, // TODO: maybe encode more about Actions later :/
+        action: impl PermissionMarker,
         object: impl Into<Darn>,
     ) -> CasbinResult<bool> {
         let action = action.to_string();
@@ -80,10 +77,11 @@ impl Casbin {
     pub async fn enforce_action(
         &self,
         subj: impl Into<DarnSubject>,
-        action: &str,
+        action: impl PermissionMarker,
         resource: impl Into<Darn>,
     ) -> bool {
         let subj = subj.into();
+        let action = &action.to_string();
         let resource = resource.into();
         let guard = self.enforcer.lock().await;
         let result = guard.enforce((&subj.to_string(), action, &resource.to_string()));
