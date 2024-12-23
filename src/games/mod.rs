@@ -4,7 +4,7 @@ use std::sync::Arc;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Deserialize, ToSchema)]
 
@@ -72,21 +72,18 @@ pub async fn insert_game_entry(pool: &PgPool, game_entry: &GameEntryData) -> Res
     Ok(())
 }
 
-use axum::{debug_handler, Extension, Json};
+use axum::{Extension, Json};
 use axum::extract::State;
 use casbin::{CoreApi, Enforcer};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing_subscriber::fmt::format;
 use utoipa::ToSchema;
 use crate::{AppState, KeycloakUserInfo};
 use crate::auth::{DefaultNamespace, RoleMarker, SiteRoles};
 use crate::auth::SitePermissions::CreateGame;
 use crate::darn::{Darn, DarnUser};
 use crate::games::game_roles::GameRoles;
-// use crate::games::game_roles::{add_game_roles, GameRoles};
-// use crate::games::game_roles::GameRoles::Author;
 
 const GAME_NS: &'static str = "game";
 
@@ -158,7 +155,7 @@ pub async fn create_game(
         updated_at: new_row.updated_at,
     };
 
-    let game_darn = Darn::new(GAME_NS).new_child(&metadata.game_id.to_string());
+    let game_darn = Darn::with_namespace(GAME_NS, &metadata.game_id.to_string());
     GameRoles::create_roles_in_namespace(&app.casbin, game_darn).await;
 
     // 5. Return 201 Created with the metadata

@@ -1,4 +1,3 @@
-#![allow(unused)]
 
 mod games;
 mod auth;
@@ -38,6 +37,8 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
+    // TODO: avoid unwrapping. Gracefully handle database/keycloak connection failures by disabling parts of the monolith.
+
     // Initialize service
     tracing_subscriber::fmt::init();
     dotenv().ok();

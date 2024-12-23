@@ -19,7 +19,6 @@ pub struct Casbin {
 }
 
 pub async fn init_casbin(database_url: String) -> Casbin {
-    println!("init_casbin");
     let model = DefaultModel::from_str(include_str!("rbac_model.conf")).await.unwrap();
     let adapter = SqlxAdapter::new(database_url, 10).await.unwrap();
     let mut enforcer = Mutex::new(Enforcer::new(model, adapter).await.unwrap());
@@ -28,8 +27,7 @@ pub async fn init_casbin(database_url: String) -> Casbin {
         enforcer,
     };
 
-    println!("made it here!");
-    SiteRoles::create_roles_in_namespace(&casbin, Darn::new("site")).await;
+    SiteRoles::create_roles_in_namespace(&casbin, Darn::new("site"));
 
     casbin
 }

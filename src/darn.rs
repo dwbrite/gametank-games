@@ -87,6 +87,10 @@ impl Darn {
         }
     }
 
+    pub fn with_namespace(namespace: &str, name: &str) -> Darn {
+        Self::new(namespace).new_child(name)
+    }
+
     pub fn full_name(&self) -> String {
         let mut full_name = String::new();
         if let Some(d) = &self.parent {

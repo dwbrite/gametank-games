@@ -52,7 +52,10 @@ pub trait RoleMarker: Display + PartialEq + Eq + Hash + Sized + Copy + Clone {
         for (superset, subset) in &Self::inheritance() {
             let superset_role = superset.to_darn_role_with_context(ns);
             let subset_role = subset.to_darn_role_with_context(ns);
-            casbin.add_subj_role(superset_role, subset_role).await;
+            match casbin.add_subj_role(superset_role, subset_role).await {
+                Ok(_) => {}
+                Err(_) => {}
+            }
         }
     }
 }
