@@ -31,9 +31,9 @@ pub enum GamePermissions {
     All,
     ModifyCollaborators,
     ModifyContributors,
-    ModifyPreviewers,
+    _ModifyPreviewers,
     Patch,
-    Delete,
+    _Delete,
     View,
 }
 

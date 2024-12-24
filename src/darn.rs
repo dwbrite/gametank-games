@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
-use crate::KeycloakUserInfo;
+use crate::auth::authn_keycloak::KeycloakUserInfo;
 
 /// Devin's abstract resource names
 

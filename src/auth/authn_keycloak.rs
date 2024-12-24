@@ -2,27 +2,30 @@ use std::env;
 use std::sync::Arc;
 use axum::extract::State;
 use axum::middleware::Next;
-use axum_core::__private::tracing::info;
 use axum_core::extract::Request;
 use axum_core::response::Response;
 use http::header;
 use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use reqwest::Client;
-use crate::{AppState, KeycloakUserInfo};
+use utoipa::ToSchema;
+use serde::{Deserialize, Serialize};
+use crate::AppState;
 use crate::auth::{DefaultNamespace, SiteRoles};
-// use crate::auth::SiteRoles::{Admin, Guest, User};
 use crate::darn::DarnUser;
 
 pub struct KeycloakClient {
     pub admin: KeycloakAdmin,
     pub realm: String,
     pub client_uuid: String,
+    client_url: String,
 }
 
+#[allow(clippy::expect_used, clippy::unwrap_used)] // expect/unwrap justified on initialization
 pub async fn init_keycloak() -> KeycloakClient {
-    let url: String = env::var("KEYCLOAK_URL").unwrap().into();
-    let user: String = env::var("KEYCLOAK_ADMIN_USER").unwrap().into();
-    let password: String = env::var("KEYCLOAK_ADMIN_PASSWORD").unwrap().into();
+    let url: String = env::var("KEYCLOAK_URL").unwrap();
+    let user: String = env::var("KEYCLOAK_ADMIN_USER").unwrap();
+    let password: String = env::var("KEYCLOAK_ADMIN_PASSWORD").unwrap();
+    let client_url: String = env::var("KEYCLOAK_CLIENT_URL").unwrap();
     let realm = "gametank-games";
     let client_id = "authz-backend".into();
 
@@ -37,6 +40,7 @@ pub async fn init_keycloak() -> KeycloakClient {
         admin,
         realm: realm.to_string(),
         client_uuid,
+        client_url,
     }
 }
 
@@ -48,8 +52,6 @@ pub async fn authn_keycloak_middleware(
 ) -> Response {
     let client = Client::new();
 
-    let client_url: String = env::var("KEYCLOAK_CLIENT_URL").unwrap().into();
-
     let maybe_token = request.headers().get(header::AUTHORIZATION).and_then(|h| h.to_str().ok());
     let mut user_info = KeycloakUserInfo {
         sub: "guest".to_string(),
@@ -60,27 +62,26 @@ pub async fn authn_keycloak_middleware(
 
     if let Some(token) = maybe_token {
         let token = token.trim_start_matches("Bearer ").to_string();
-        if let Ok(response) = client.get(client_url).bearer_auth(token).send().await {
+        if let Ok(response) = client.get(&app.keycloak.client_url).bearer_auth(token).send().await {
             if response.status().is_success() {
-                // TODO: make this an error
-                user_info = response.json::<KeycloakUserInfo>().await.expect("Successful response from keycloak implies we get UserInfo. If this isn't true, then, fuck me I guess.");
-                check_user_roles(&app, &user_info).await;
+                #[allow(clippy::expect_used)]{
+                    user_info = response.json::<KeycloakUserInfo>().await.expect("Successful response from keycloak implies we get UserInfo. If this isn't true, then, fuck me I guess.");
+                }
+                initialize_user_role(&app, &user_info).await;
             }
         }
     }
 
     request.extensions_mut().insert(user_info);
 
-    let response = next.run(request).await;
-
-    response
+    next.run(request).await
 }
 
 // Rust function to check user login and assign 'user' role if first login
-pub async fn check_user_roles(
+pub async fn initialize_user_role(
     app: &Arc<AppState>,
     user: &KeycloakUserInfo,
-) -> anyhow::Result<()> {
+) {
     let admins = [
         DarnUser::from(&KeycloakUserInfo {
             sub: "6d93fb96-8dad-410e-880d-ed79ca568bc3".to_string(),
@@ -93,23 +94,22 @@ pub async fn check_user_roles(
 
     // Check if the user has a role
     let roles = app.casbin.get_explicit_roles(user).await;
-    info!("Current roles: {:?}", roles);
-
     if roles.is_empty() {
         if admins.contains(user) {
-            info!("User is an admin; assigning 'site:admin' role");
             app.casbin
                 .add_subj_role(user, SiteRoles::Admin.to_darn_role())
-                .await?;
+                .await;
         } else {
-            info!("User is not an admin; assigning 'site:user' role");
             app.casbin
                 .add_subj_role(user, SiteRoles::User.to_darn_role())
-                .await?;
+                .await;
         }
-    } else {
-        println!("User already has roles; no changes made");
     }
+}
 
-    Ok(())
+#[derive(ToSchema, Serialize, Deserialize, Debug, Clone)]
+pub struct KeycloakUserInfo {
+    pub sub: String,
+    pub preferred_username: String,
+    pub email: String,
 }

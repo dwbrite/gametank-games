@@ -1,10 +1,12 @@
+#![deny(unused_must_use)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
 
 mod games;
 mod auth;
 mod darn;
 
 use std::env;
-use tokio;
 use axum::{debug_handler, routing::get, Extension, Json, Router};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -12,18 +14,13 @@ use axum::routing::{get_service, post};
 use sqlx::{migrate, PgPool};
 use std::sync::Arc;
 use axum::extract::{Request, State};
-use casbin::CoreApi;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
-use utoipa::ToSchema;
+use auth::authn_keycloak::KeycloakUserInfo;
 use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
 use crate::games::create_game;
-// #[derive(OpenApi)]
-// #[openapi(paths(upload_game), components(schemas(GameEntry)))]
-// pub struct ApiDoc;
 
 pub struct AppState {
     pub keycloak: KeycloakClient,
@@ -33,16 +30,17 @@ pub struct AppState {
 }
 
 #[tokio::main]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 async fn main() {
-    // TODO: avoid unwrapping. Gracefully handle database/keycloak connection failures by disabling parts of the monolith.
-
+    // TODO: Gracefully handle database/keycloak connection failures by disabling parts of the monolith.
     // Initialize service
     tracing_subscriber::fmt::init();
     dotenv().ok();
     //
     // let openapi = ApiDoc::openapi();
 
-    let database_url: String = env::var("DATABASE_URL").unwrap().into();
+    // expect/unwrap justified for initialization
+    let database_url: String = env::var("DATABASE_URL").unwrap();
     let pool = PgPool::connect(&database_url).await.unwrap();
     migrate!().run(&pool).await.expect("Failed to run migrations");
 
@@ -70,28 +68,20 @@ async fn main() {
             get_service(ServeFile::new("./target/ui/index.html"))
         );
 
-    // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:41123").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
 
-#[derive(ToSchema, Serialize, Deserialize, Debug, Clone)]
-pub struct KeycloakUserInfo {
-    pub sub: String,
-    pub preferred_username: String,
-    pub email: String,
+    // expect/unwrap justified for initialization
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:41123").await.expect("Can not bind to address");
+    axum::serve(listener, app).await.unwrap();
 }
 
 #[debug_handler]
 async fn get_user_info(
-    State(app): State<Arc<AppState>>,
+    State(_app): State<Arc<AppState>>,
     Extension(user_info): Extension<KeycloakUserInfo>,
-    request: Request,
+    _request: Request,
 ) -> impl IntoResponse {
-
-    // Return a unified type for all match arms
+    // TODO: get user roles
     let body = json!(user_info);
-
     (StatusCode::OK, Json(body))
 }
 

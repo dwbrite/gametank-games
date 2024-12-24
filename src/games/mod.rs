@@ -1,8 +1,8 @@
 mod game_roles;
 
 use std::sync::Arc;
-use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
+use sqlx::FromRow;
+use uuid::{Uuid};
 
 use chrono::{DateTime, Utc};
 
@@ -17,9 +17,9 @@ pub struct GameEntryCreate {
 #[derive(Debug, Deserialize, ToSchema)]
 
 pub struct GameEntryPatch {
-    pub game_name: Option<String>,
-    pub description: Option<String>,
-    pub game_rom: Option<Vec<u8>>,
+    pub _game_name: Option<String>,
+    pub _description: Option<String>,
+    pub _game_rom: Option<Vec<u8>>,
 }
 
 #[derive(Debug, FromRow, ToSchema, Serialize, Deserialize)]
@@ -43,49 +43,19 @@ pub struct GameEntryMetadata {
     pub updated_at: DateTime<Utc>,
 }
 
-pub async fn enforce_upload_permission(
-    enforcer: Arc<RwLock<Enforcer>>,
-    user: &str,
-) -> Result<(), &'static str> {
-    if enforcer.read().await.enforce((user, "game", "upload")).unwrap_or(false) {
-        Ok(())
-    } else {
-        Err("Access denied")
-    }
-}
-
-pub async fn insert_game_entry(pool: &PgPool, game_entry: &GameEntryData) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        "INSERT INTO game_entries (game_id, game_name, author, description, created_at, updated_at, game_rom)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        game_entry.game_id,
-        game_entry.game_name,
-        game_entry.author,
-        game_entry.description,
-        game_entry.created_at,
-        game_entry.updated_at,
-        game_entry.game_rom
-    )
-        .execute(pool)
-        .await?;
-
-    Ok(())
-}
-
 use axum::{Extension, Json};
 use axum::extract::State;
-use casbin::{CoreApi, Enforcer};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
 use utoipa::ToSchema;
-use crate::{AppState, KeycloakUserInfo};
+use crate::AppState;
 use crate::auth::{DefaultNamespace, RoleMarker, SiteRoles};
+use crate::auth::authn_keycloak::KeycloakUserInfo;
 use crate::auth::SitePermissions::CreateGame;
 use crate::darn::{Darn, DarnUser};
 use crate::games::game_roles::GameRoles;
 
-const GAME_NS: &'static str = "game";
+const GAME_NS: &str = "game";
 
 #[utoipa::path(
     post,
@@ -117,6 +87,13 @@ pub async fn create_game(
 
         return Err((StatusCode::FORBIDDEN, "Access denied".to_string()));
     }
+    
+    let author_uuid = match Uuid::parse_str(&user_info.sub) {
+        Ok(s) => { s }
+        Err(_) => {
+            return Err((StatusCode::FORBIDDEN, "Invalid user ID".to_string()));
+        }
+    };
 
     let new_id = Uuid::new_v4();
     let new_row = sqlx::query_as!(
@@ -137,7 +114,7 @@ pub async fn create_game(
         game_input.game_name,
         game_input.description,
         game_input.game_rom,
-        Uuid::parse_str(&user_info.sub).expect("Failed to parse user uuid"),
+        author_uuid,
     )
         .fetch_one(&app.pg_pool)
         .await
