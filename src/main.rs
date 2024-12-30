@@ -20,7 +20,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
 use auth::authn_keycloak::KeycloakUserInfo;
 use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
-use crate::games::create_game;
+use crate::games::create_game::{create_game};
 
 pub struct AppState {
     pub keycloak: KeycloakClient,

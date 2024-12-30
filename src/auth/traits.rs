@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::hash::Hash;
 use std::collections::HashMap;
-use crate::auth::Casbin;
+use crate::auth::{Casbin, KeycloakUserInfo};
 use crate::darn::{Darn, DarnRole};
 
 pub trait PermissionMarker: Display + Copy {}
@@ -47,5 +47,44 @@ pub trait RoleMarker: Display + PartialEq + Eq + Hash + Sized + Copy + Clone {
             let subset_role = subset.to_darn_role_with_context(ns);
             casbin.add_subj_role(superset_role, subset_role).await;
         }
+    }
+}
+
+use axum::extract::{State};
+use axum::response::IntoResponse;
+use std::sync::Arc;
+use axum::Extension;
+use axum_core::extract::FromRequest;
+use http::StatusCode;
+use crate::AppState;
+
+#[async_trait::async_trait]
+pub trait AuthorizedHandler<T, B>
+where
+    T: FromRequest<Arc<AppState>> + Send + 'static, // Extractable input
+    B: IntoResponse + Send + 'static,                           // Output type
+{
+    async fn authorize(
+        app_state: &Arc<AppState>,
+        user_info: &KeycloakUserInfo,
+        input: &T,
+    ) -> Result<(), (StatusCode, String)>;
+
+    async fn process(
+        app_state: Arc<AppState>,
+        user_info: KeycloakUserInfo,
+        input: T,
+    ) -> Result<B, (StatusCode, String)>;
+
+    async fn handle(
+        State(app_state): State<Arc<AppState>>,
+        Extension(user_info): Extension<KeycloakUserInfo>,
+        input: T,
+    ) -> Result<B, (StatusCode, String)>
+    where
+        Self: Sized,
+    {
+        Self::authorize(&app_state, &user_info, &input).await?;
+        Self::process(app_state, user_info, input).await
     }
 }

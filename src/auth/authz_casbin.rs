@@ -3,8 +3,8 @@ use sqlx_adapter::SqlxAdapter;
 use tokio::sync::Mutex;
 use casbin::{CoreApi, DefaultModel, Enforcer, MgmtApi, RbacApi};
 use log::error;
-use crate::auth::{DefaultNamespace, PermissionMarker, SiteRoles};
-use crate::darn::{Darn, DarnRole, DarnSubject};
+use crate::auth::{DefaultNamespace, KeycloakUserInfo, PermissionMarker, SiteRoles};
+use crate::darn::{Darn, DarnRole, DarnSubject, DarnUser};
 
 pub struct Casbin {
     enforcer: Mutex<Enforcer>,
@@ -17,7 +17,8 @@ pub async fn init_casbin(database_url: String) -> Casbin {
     let adapter = SqlxAdapter::new(database_url, 10).await.unwrap();
     let enforcer = Mutex::new(Enforcer::new(model, adapter).await.unwrap());
 
-    let casbin = Casbin {
+    let casbin = Casbin 
+    {
         enforcer,
     };
 
@@ -76,13 +77,18 @@ impl Casbin {
         }
     }
 
+    pub async fn enforce_http(&self, user: &KeycloakUserInfo, action: impl PermissionMarker, resource: impl Into<Darn>) -> Result<(), (http::StatusCode, String)> {
+        let user_darn = DarnUser::from(user);
+        self.enforce_action_for_subject(user_darn, action, resource).await.map_err(|e| (http::StatusCode::FORBIDDEN, e))
+    }
+
     /// Enforce that a `subject` can perform and `action` a `resource`.
-    pub async fn enforce_action(
+    pub async fn enforce_action_for_subject(
         &self,
         subj: impl Into<DarnSubject>,
         action: impl PermissionMarker,
         resource: impl Into<Darn>,
-    ) -> bool {
+    ) -> Result<(), String> {
         let subj = subj.into();
         let action = &action.to_string();
         let resource = resource.into();
@@ -91,7 +97,11 @@ impl Casbin {
         if let Err(err) = &result {
             warn!("Failed to enforce permissions for {}. {}: {}\n returning false", subj, action, err);
         }
-        result.unwrap_or(false)
+
+        match result {
+            Ok(true) => { Ok(()) },
+            _ => { Err("Access Denied".to_string()) }
+        }
     }
 
     /// Retrieve all roles **directly** assigned to this subject (no inheritance).
@@ -119,5 +129,10 @@ impl Casbin {
     ) -> Vec<Vec<String>> {
         let mut guard = self.enforcer.lock().await;
         guard.get_implicit_permissions_for_user(&subj.into().to_string(), None)
+    }
+
+    pub async fn get_users_for_role(&self, role: impl Into<DarnRole>) -> Vec<String> {
+        let guard = self.enforcer.lock().await;
+        guard.get_users_for_role(&role.into().to_string(), None)
     }
 }
