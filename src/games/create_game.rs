@@ -6,27 +6,24 @@ use sqlx::query_as;
 use uuid::Uuid;
 use darn_authorize_macro::authorize;
 use crate::AppState;
-use crate::auth::{AuthorizedHandler, DefaultNamespace, KeycloakUserInfo, RoleMarker, SiteRoles};
+use crate::auth::{DefaultNamespace, KeycloakUserInfo, RoleMarker, SiteRoles};
 use crate::auth::SitePermissions::CreateGame;
 use crate::darn::{Darn};
 use crate::games::{GameEntryCreate, GameEntryMetadata, GAME_NS};
 use crate::games::game_roles::GameRoles;
 
-pub fn extract_game_object(input: &GameEntryCreate) -> Darn {
-    // Example extraction logic
-    Darn::with_namespace("game_namespace", &input.game_name)
-}
+// #[utoipa::path(
+//     post,
+//     path = "/games",
+//     request_body = GameEntryCreate,
+//     responses(
+//         (status = 201, description = "Game uploaded successfully", body = GameEntryMetadata),
+//         (status = 403, description = "Access denied"),
+//         (status = 500, description = "Internal server error")
+//     )
+// )]
 
-#[utoipa::path(
-    post,
-    path = "/games",
-    request_body = GameEntryCreate,
-    responses(
-        (status = 201, description = "Game uploaded successfully", body = GameEntryMetadata),
-        (status = 403, description = "Access denied"),
-        (status = 500, description = "Internal server error")
-    )
-)]
+#[authorize(SitePermissions::CreateGame, || { SiteRoles::default_namespace() })]
 pub async fn create_game(
     State(app_state): State<Arc<AppState>>,
     Extension(user_info): Extension<KeycloakUserInfo>,
