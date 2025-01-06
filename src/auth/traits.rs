@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::hash::Hash;
 use std::collections::HashMap;
-use crate::auth::{Casbin, KeycloakUserInfo};
+use crate::auth::{Casbin};
 use crate::darn::{Darn, DarnRole};
 
 pub trait PermissionMarker: Display + Copy {}

@@ -59,6 +59,13 @@ pub async fn authn_keycloak_middleware(
         email: "".to_string(),
     };
 
+    let user = &DarnUser::from(&user_info);
+    let roles = app.casbin.get_explicit_roles(user).await;
+    if roles.is_empty() {
+        app.casbin
+            .add_subj_role(user, SiteRoles::Guest.to_darn_role())
+            .await;
+    }
 
     if let Some(token) = maybe_token {
         let token = token.trim_start_matches("Bearer ").to_string();
