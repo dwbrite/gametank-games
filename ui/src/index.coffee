@@ -7,6 +7,7 @@ keycloak = new Keycloak({
 try
   authenticated = await keycloak.init(
     onLoad: 'check-sso',
+    checkLoginIframe: false,
   )
   if (authenticated)
     console.log('User is authenticated')
@@ -101,7 +102,7 @@ GameList =
   error: null     # Error state
 
   oninit: ->
-# Fetch the games when the component initializes
+    # Fetch the games when the component initializes
     Auth.api.list_games()
       .then (data) ->
         GameList.games = data
@@ -128,6 +129,7 @@ GameList =
 
 Auth =
   api: shimApiWithTokenRefresh(Api)
+  authenticated: authenticated
 
   login: ->
     console.log("logging in???")
@@ -139,6 +141,7 @@ Auth =
 
   view: ->
     <div className="auth-container">
+      <h1>gametank.games</h1>
       <div className="auth-buttons">
         <button onclick={Auth.login} disabled={Auth.authenticated}>Login</button>
         <button onclick={Auth.logout} disabled={!Auth.authenticated}>Logout</button>

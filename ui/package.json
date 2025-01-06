@@ -7,7 +7,7 @@
     "build:public": "npx copyfiles --up 1 \"public/**/*\" ../target/ui",
     "build:sass": "sass --source-map css/styles.scss ../target/ui/styles.css",
     "watch:coffee": "coffee --watch --transpile --map --output ../target/ui/js/ src/",
-    "watch:public": "npx copyfiles --up 1 \"public/**/*\" ../target/ui --watch",
+    "watch:public": "cpx \"public/**/*\" ../target/ui --watch",
     "watch:sass": "sass --watch --source-map css/styles.scss:../target/ui/styles.css",
     "watch": "concurrently \"npm run watch:coffee\" \"npm run watch:sass\" \"npm run watch:public\""
   },
@@ -25,6 +25,7 @@
     "coffeeify": "^3.0.1",
     "coffeescript": "^2.7.0",
     "concurrently": "^9.1.0",
+    "cpx": "^1.5.0",
     "sass": "^1.82.0",
     "watchify": "^4.0.0"
   },
