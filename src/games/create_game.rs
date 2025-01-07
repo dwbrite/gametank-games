@@ -9,7 +9,7 @@ use crate::AppState;
 use crate::auth::{DefaultNamespace, KeycloakUserInfo, RoleMarker, SiteRoles};
 use crate::auth::SitePermissions;
 use crate::darn::{Darn};
-use crate::games::{GameEntryCreate, GameEntryMetadata, GAME_NS};
+use crate::games::{GameEntryCreate, GameEntryMetadata, GameEntryMetadataDisplay, GAME_NS};
 use crate::games::game_roles::GameRoles;
 
 #[utoipa::path(
@@ -27,7 +27,7 @@ pub async fn create_game(
     State(app_state): State<Arc<AppState>>,
     Extension(user_info): Extension<KeycloakUserInfo>,
     Json(input): Json<GameEntryCreate>,
-) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
+) -> Result<(StatusCode, Json<GameEntryMetadataDisplay>), (StatusCode, String)> {
     let author_uuid = Uuid::parse_str(&user_info.sub).map_err(|_| {
         (StatusCode::FORBIDDEN, "Invalid user ID".to_string())
     })?;
@@ -64,6 +64,8 @@ pub async fn create_game(
 
     let game_darn = Darn::with_namespace(GAME_NS, &metadata.game_id.to_string());
     GameRoles::create_roles_in_namespace(&app_state.casbin, game_darn).await;
+    
+    let metadata = metadata.humanize(&app_state).await;
 
     Ok((StatusCode::CREATED, Json(metadata)))
 }

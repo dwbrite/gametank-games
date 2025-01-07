@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Daydream';
-  src: url('/static/fonts/daydream_3/Daydream.ttf') format('truetype');
+  src: url('/static/fonts/daydream_3/daydream_modified.ttf') format('truetype');
 }
 
 @font-face {
@@ -12,6 +12,142 @@
   font-family: 'PressStart2P';
   src: url('/static/fonts/press_start_2p/PressStart2P.ttf') format('truetype');
 }
+@font-face {
+  font-family: 'Adventurer';
+  src: url('/static/fonts/Adventurer.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Born2bSportyV2';
+  src: url('/static/fonts/Born2bSportyV2.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'BoxyBoldv2';
+  src: url('/static/fonts/BoxyBoldv2.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'ChiKareGo2';
+  src: url('/static/fonts/ChiKareGo2.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'MK1GameGearV2';
+  src: url('/static/fonts/MK1GAMEGEARV2.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Monogram';
+  src: url('/static/fonts/monogram.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'PixelByzantine';
+  src: url('/static/fonts/PixelByzantine.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'PixelItalic';
+  src: url('/static/fonts/Pixel_Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'PlainPixel';
+  src: url('/static/fonts/PlainPixel.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Seraphimb1';
+  src: url('/static/fonts/Seraphimb1.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Sonic1';
+  src: url('/static/fonts/Sonic1.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Streetwize';
+  src: url('/static/fonts/Streetwize.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'SuperMario64';
+  src: url('/static/fonts/SuperMario64.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'TrueItalic';
+  src: url('/static/fonts/trueitalic.ttf') format('truetype');
+}
+
+$pixel-fonts: (
+    'Adventurer':     (default-size: 16px, uppercase: false),
+    'Born2bSportyV2': (default-size: 16px, uppercase: false),
+    'BoxyBoldv2':     (default-size: 16px, uppercase: false),
+    'ChiKareGo2':     (default-size: 16px, uppercase: false),
+    'Daydream':       (default-size: 13px, uppercase: true),
+    'MK1GameGearV2':  (default-size: 16px, uppercase: false),
+    'Monogram':       (default-size: 16px, uppercase: false),
+    'PixelByzantine': (default-size: 16px, uppercase: false),
+    'PlainPixel':     (default-size: 16px, uppercase: false),
+    'PressStart2P':   (default-size: 8px, uppercase: false),
+    'Seraphimb1':     (default-size: 16px, uppercase: false),
+    'Sonic1':         (default-size: 16px, uppercase: false),
+    'Streetwize':     (default-size: 16px, uppercase: false),
+    'SuperMario64':   (default-size: 16px, uppercase: false),
+    'TrueItalic':     (default-size: 16px, uppercase: false)
+);
+
+// Mixin for reusable font styling
+@mixin pixel-font($font-name, $scale: 1) {
+  $font-data: map-get($pixel-fonts, $font-name);
+
+  @if $font-data == null {
+    @error "Font #{$font-name} is not defined in the $pixel-fonts map.";
+  }
+
+  $default-size: map-get($font-data, default-size);
+  $uppercase: map-get($font-data, uppercase);
+
+  font-family: $font-name, sans-serif;
+  font-size: calc(#{$default-size} * #{$scale});
+  line-height: 1;
+
+  @if $uppercase {
+    text-transform: uppercase;
+  }
+}
+
+.game-entry {
+  display: flex;
+  justify-content: space-between;
+  width: 480px;
+  margin: 16px;
+}
+
+.game-list {
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+}
+
+a {
+  color: #faebd7;
+  font-family: "Mario64", serif;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+@each $font-name, $ignored in $pixel-fonts {
+  .font-preview.#{$font-name} {
+    @include pixel-font($font-name, 1);
+  }
+  h1.font-preview.#{$font-name} {
+    @include pixel-font($font-name, 2);
+  }
+}
 
 body {
   color: #faebd7;
@@ -19,16 +155,19 @@ body {
   text-transform: unset;
   min-height: 100vh;
 
-  font-family: "PressStart2P", sans-serif;
-  font-size: 8px;
-
   h1 {
-    font-family: "Daydream", sans-serif;
-    font-size: 16pt;
+    @include pixel-font('Daydream', 2);
   }
 
-  h2, h3, h4 {
+  h2 {
     font-size: 16px;
+  }
+
+  h3, h4 {
+    font-family: "Daydream", sans-serif;
+    word-spacing: 8px;
+    font-size: 13px;
+    text-transform: uppercase;
   }
 
   &::before {

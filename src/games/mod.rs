@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use http::StatusCode;
+use keycloak::types::TypeString;
 use darn_authorize_macro::authorize;
 use crate::AppState;
 use crate::auth::{DefaultNamespace, KeycloakUserInfo, SitePermissions, SiteRoles};
@@ -52,6 +53,27 @@ pub struct GameEntryMetadata {
     pub updated_at: DateTime<Utc>,
 }
 
+impl GameEntryMetadata {
+    pub async fn humanize(self, app_state: &Arc<AppState>) -> GameEntryMetadataDisplay {
+        let result = app_state.keycloak.admin.realm_users_with_user_id_get(
+            &app_state.keycloak.realm,
+            &self.author.to_string(),
+            None
+        ).await.unwrap_or_default().username.unwrap_or(TypeString::from("unknown")).to_string();
+
+        GameEntryMetadataDisplay {
+            metadata: self,
+            author_name: result,
+        }
+    }
+}
+
+#[derive(Debug, FromRow, ToSchema, Serialize, Deserialize)]
+pub struct GameEntryMetadataDisplay {
+    metadata: GameEntryMetadata,
+    author_name: String,
+}
+
 const GAME_NS: &str = "game";
 
 #[utoipa::path(
@@ -67,7 +89,7 @@ const GAME_NS: &str = "game";
 pub async fn list_public_games(
     State(app_state): State<Arc<AppState>>,
     Extension(user_info): Extension<KeycloakUserInfo>,
-) -> Result<(StatusCode, Json<Vec<GameEntryMetadata>>), (StatusCode, String)> {
+) -> Result<(StatusCode, Json<Vec<GameEntryMetadataDisplay>>), (StatusCode, String)> {
     let games_result = sqlx::query_as!(
         GameEntryMetadata,
         r#"
@@ -87,8 +109,18 @@ pub async fn list_public_games(
         .fetch_all(&app_state.pg_pool)
         .await;
 
+
+    use futures::future::join_all;
+
     match games_result {
-        Ok(games) => Ok((StatusCode::OK, Json(games))),
+        Ok(games) => {
+            let games: Vec<GameEntryMetadata> = games;
+            let g2 = join_all(
+                games.into_iter().map(|entry| entry.humanize(&app_state))
+            ).await;
+
+            Ok((StatusCode::OK, Json(g2)))
+        },
         Err(e) => {
             // Log the error for debugging purposes
             eprintln!("Error fetching games: {:?}", e);

@@ -38,6 +38,7 @@ log = "0.4.22"
 async-trait = "0.1.83"
 
 darn_authorize_macro = { path = "./darn_authorize_macro" }
+futures = "0.3.31"
 
 [build-dependencies]
 npm_rs = "1.0.0"

@@ -1,20 +1,4 @@
-keycloak = new Keycloak({
-  url: 'https://keycloak.dwbrite.com',
-  realm: 'gametank-games',
-  clientId: 'login-frontend',
-})
-
-try
-  authenticated = await keycloak.init(
-    onLoad: 'check-sso',
-    checkLoginIframe: false,
-  )
-  if (authenticated)
-    console.log('User is authenticated')
-  else
-    console.log('User is not authenticated')
-catch error
-  console.error('Failed to initialize adapter:', error)
+require 'coffeescript/register'
 
 Api =
   load_user_info: ->
@@ -73,7 +57,7 @@ shimApiWithTokenRefresh = (api) ->
   Object.keys(api).forEach (key) ->
     originalFn = api[key]
     shimmedApi[key] = (...args) ->
-      if authenticated
+      if keycloak.authenticated
         try
           await keycloak.updateToken(30)
         catch err
@@ -89,11 +73,16 @@ GameEntry =
     game = vnode.attrs.game
 
     <div className="game-entry">
-      <h2>{game.game_name}</h2>
-      <p>{game.description}</p>
-      <p><strong>Author:</strong> {game.author}</p>
-      <p><strong>Created At:</strong> {new Date(game.created_at).toLocaleString()}</p>
-      <p><strong>Updated At:</strong> {new Date(game.updated_at).toLocaleString()}</p>
+      <img src="https://i.redd.it/pvegyycnjkb71.jpg" width="128px" height="128px"></img>
+
+      <div>
+        <h3>{game.metadata.game_name}</h3>
+        <a className="author_name" href={"/users/" + game.metadata.author}>{game.author_name}</a>
+
+        <p>{game.metadata.description}</p>
+
+        <p>Created At: {new Date(game.metadata.created_at).toLocaleString()}</p>
+      </div>
     </div>
 
 GameList =
@@ -103,7 +92,7 @@ GameList =
 
   oninit: ->
     # Fetch the games when the component initializes
-    Auth.api.list_games()
+    AuthenticatedApi.api.list_games()
       .then (data) ->
         GameList.games = data
         GameList.loading = false
@@ -127,13 +116,27 @@ GameList =
         }
       </div>
 
-Auth =
+import keycloak from './keycloak';
+
+AuthenticatedApi =
   api: shimApiWithTokenRefresh(Api)
-  authenticated: authenticated
+
+  oninit: (vnode) ->
+    try
+      authenticated = await keycloak.init(
+        onLoad: 'check-sso',
+        responseMode: 'query'
+      )
+      if authenticated
+        console.log 'User is authenticated'
+      else
+        console.log 'User is not authenticated'
+    catch error
+      console.error 'Failed to initialize Keycloak:', error
 
   login: ->
     console.log("logging in???")
-    authenticated = keycloak.login()
+    keycloak.login()
 
   logout: ->
     await keycloak.logout()
@@ -141,12 +144,12 @@ Auth =
 
   view: ->
     <div className="auth-container">
-      <h1>gametank.games</h1>
+      <h1>gametank.gamess</h1>
       <div className="auth-buttons">
-        <button onclick={Auth.login} disabled={Auth.authenticated}>Login</button>
-        <button onclick={Auth.logout} disabled={!Auth.authenticated}>Logout</button>
-        <button onclick={Auth.api.load_user_info}>User Info</button>
-        <button onclick={Auth.api.create_resource}>Create Game</button>
+        <button onclick={this.login} disabled={keycloak.authenticated}>Login</button>
+        <button onclick={this.logout} disabled={!keycloak.authenticated}>Logout</button>
+        <button onclick={this.api.load_user_info}>User Info</button>
+        <button onclick={this.api.create_resource}>Create Game</button>
       </div>
 
 
@@ -156,7 +159,7 @@ Auth =
       </div>
     </div>
 
-
 m.route(document.body, "/", {
-  "/": Auth
+  "/": AuthenticatedApi
 })
+
