@@ -125,6 +125,7 @@ $pixel-fonts: (
   justify-content: space-between;
   width: 480px;
   margin: 16px;
+  flex: 0;
 }
 
 .game-list {
@@ -154,6 +155,28 @@ body {
   overflow: hidden;
   text-transform: unset;
   min-height: 100vh;
+  background-image: url("/static/code_long_transparent.png");
+  background-repeat: no-repeat;
+
+  .the-page {
+    max-width: 1024px;
+    min-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+
+    @include pixel-font("PlainPixel", 1);
+  }
+
+  .the-top {
+    margin-top: 16px;
+    margin-bottom: 16px;
+    margin-left: 4px;
+    margin-right: 4px;
+  }
+
+  .the-games {
+    background-color: #4f3e4e;
+  }
 
   h1 {
     @include pixel-font('Daydream', 2);

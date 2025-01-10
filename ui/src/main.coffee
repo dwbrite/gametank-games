@@ -1,72 +1,5 @@
 require 'coffeescript/register'
 
-Api =
-  load_user_info: ->
-    console.log('Fetching user info...')
-    fetch('/api/user-info', {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + keycloak.token,  # Send Keycloak token
-        'Content-Type': 'application/json'
-      }
-    })
-      .then((response) ->
-        if response.ok
-          return response.json();
-        else
-          throw new Error("Failed to fetch user info")
-    )
-      .then((data) ->
-        console.log('User info from backend:', data)
-    )
-      .catch((error) ->
-        console.error('Error fetching user info:', error)
-    )
-
-  create_resource: ->
-    console.log("creating resource")
-    fetch('/api/games', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + keycloak.token, # Send Keycloak token
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify {
-        "game_name": "My First Game",
-        "description": "This is a cool game with no ROM data yet!",
-        "game_rom": []
-      }
-
-    })
-
-  list_games: ->
-    console.log("listing games")
-    fetch("/api/games", {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + keycloak.token, # Send Keycloak token
-        'Content-Type': 'application/json'
-      }
-    }).then (response) ->
-      response.json().then (data) ->
-        return data
-
-shimApiWithTokenRefresh = (api) ->
-  shimmedApi = {}
-
-  Object.keys(api).forEach (key) ->
-    originalFn = api[key]
-    shimmedApi[key] = (...args) ->
-      if keycloak.authenticated
-        try
-          await keycloak.updateToken(30)
-        catch err
-          console.error 'Failed to refresh token', err
-          throw new Error 'Token refresh failed'
-
-      originalFn(...args)
-
-  shimmedApi
 
 GameEntry =
   view: (vnode) ->
@@ -96,11 +29,9 @@ GameList =
       .then (data) ->
         GameList.games = data
         GameList.loading = false
-        m.redraw()# Trigger a redraw to update the view
       .catch (err) ->
         GameList.error = "Failed to load games."
         GameList.loading = false
-        m.redraw()
 
   view: ->
     if GameList.loading
@@ -116,50 +47,80 @@ GameList =
         }
       </div>
 
-import keycloak from './keycloak';
+#
+#AuthenticatedApi =
+#
+#  view: ->
+#    <div className="auth-container">
+#      <h1>gametank.gamess</h1>
+#      <div className="auth-buttons">
+#        <button onclick={this.login} disabled={keycloak.authenticated}>Login</button>
+#        <button onclick={this.logout} disabled={!keycloak.authenticated}>Logout</button>
+#        <button onclick={this.api.load_user_info}>User Info</button>
+#        <button onclick={this.api.create_resource}>Create Game</button>
+#      </div>
+#
+#
+#      <div className="game-section">
+#        <h2>Game List</h2>
+#        <GameList/>
+#      </div>
+#    </div>
 
-AuthenticatedApi =
-  api: shimApiWithTokenRefresh(Api)
+UserMenu =
+  state: {
+    initialized: false
+    user_info: null
+  }
 
-  oninit: (vnode) ->
-    try
-      authenticated = await keycloak.init(
-        onLoad: 'check-sso',
-        responseMode: 'query'
-      )
-      if authenticated
-        console.log 'User is authenticated'
-      else
-        console.log 'User is not authenticated'
-    catch error
-      console.error 'Failed to initialize Keycloak:', error
+  oninit: ->
+    Api.load_user_info().then (data) =>
+      this.state.user_info = data
 
-  login: ->
-    console.log("logging in???")
-    keycloak.login()
-
-  logout: ->
-    await keycloak.logout()
-    console.log('User logged out')
-
-  view: ->
-    <div className="auth-container">
-      <h1>gametank.gamess</h1>
-      <div className="auth-buttons">
-        <button onclick={this.login} disabled={keycloak.authenticated}>Login</button>
-        <button onclick={this.logout} disabled={!keycloak.authenticated}>Logout</button>
-        <button onclick={this.api.load_user_info}>User Info</button>
-        <button onclick={this.api.create_resource}>Create Game</button>
+  view: (vnode) ->
+    if not Api.initialized
+      <div className="userMenu">
+        Initializing...
+      </div>
+    else if not Api.authenticated()
+      <div className="userMenu">
+        <span>Guest</span>
+        <a href="#" onclick={(e) =>
+          e.preventDefault()
+          Api.login()
+        }>Login</a>
+      </div>
+    else
+      <div className="userMenu">
+        <span>Welcome, { this.state.user_info?.preferred_username or "..."}</span>
+        <a href="#" onclick={(e) =>
+          e.preventDefault()
+          console.log("logging out")
+          Api.logout()
+        }>Logout</a>
       </div>
 
+import Api from './api'
 
-      <div className="game-section">
-        <h2>Game List</h2>
-        <GameList/>
+Site =
+  view: ->
+    <div className="the-page">
+      <div className="the-top">
+        <h1>GAMETANK.GAMES</h1>
+        <UserMenu/>
+      </div>
+      <div className="the-games">
+          hi
       </div>
     </div>
 
+Profile =
+  view: ->
+    <div><a href="/">go back</a></div>
+
+m.route.prefix = ""
 m.route(document.body, "/", {
-  "/": AuthenticatedApi
+  "/": Site,
+  "/profile": Profile
 })
 
