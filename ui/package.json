@@ -11,7 +11,6 @@
     "watch:public": "cpx \"public/**/*\" ../target/ui --watch",
     "watch": "concurrently \"npm run watch:webpack\" \"npm run watch:sass\" \"npm run watch:public\""
   },
-
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -40,9 +39,9 @@
   },
   "dependencies": {
     "babel-core": "^7.0.0-bridge.0",
+    "keycloak-js": "22.0.5",
     "mithril": "^2.2.12",
     "path-browserify": "^1.0.1",
-    "vm-browserify": "^1.1.2",
-    "keycloak-js": "22.0.5"
+    "vm-browserify": "^1.1.2"
   }
 }

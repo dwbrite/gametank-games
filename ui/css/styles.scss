@@ -1,3 +1,5 @@
+@use "sass:map";
+
 @font-face {
   font-family: 'Daydream';
   src: url('/static/fonts/daydream_3/daydream_modified.ttf') format('truetype');
@@ -102,14 +104,14 @@ $pixel-fonts: (
 
 // Mixin for reusable font styling
 @mixin pixel-font($font-name, $scale: 1) {
-  $font-data: map-get($pixel-fonts, $font-name);
+  $font-data: map.get($pixel-fonts, $font-name);
 
   @if $font-data == null {
     @error "Font #{$font-name} is not defined in the $pixel-fonts map.";
   }
 
-  $default-size: map-get($font-data, default-size);
-  $uppercase: map-get($font-data, uppercase);
+  $default-size: map.get($font-data, default-size);
+  $uppercase: map.get($font-data, uppercase);
 
   font-family: $font-name, sans-serif;
   font-size: calc(#{$default-size} * #{$scale});
@@ -120,12 +122,105 @@ $pixel-fonts: (
   }
 }
 
+
+.navigation {
+  @media screen and (min-width: 1080px) {
+    h1 {
+      @include pixel-font('Daydream', 6);
+      text-transform: uppercase;
+    }
+
+    .user-menu {
+      text-align: right;
+      margin-right: 4px;
+      margin-left: auto;
+
+      .welcome-text {
+        margin-right: 1px;
+      }
+
+      button {
+        margin: 8px 0 8px 8px;
+      }
+    }
+  }
+
+  @media screen and (max-width: 1080px) {
+    h1 {
+      @include pixel-font('Daydream', 4);
+      text-transform: uppercase;
+    }
+
+    .user-menu {
+      text-align: left;
+      margin-left: 4px;
+
+      .welcome-text {
+        margin-left: 4px;
+      }
+
+      button {
+        margin: 8px 8px 8px 0;
+      }
+    }
+  }
+
+  h1 {
+    @include pixel-font('Daydream', 4);
+    text-transform: uppercase;
+  }
+
+  .user-menu {
+    margin-top: -2px;
+    display: flex;
+    flex-direction: column;
+
+    @include pixel-font("TrueItalic", 2);
+
+    .username {
+      @include pixel-font("Streetwize", 2);
+    }
+
+    .user-menu-buttons {
+      margin-top: auto;
+    }
+  }
+}
+
+button {
+  @include pixel-font("TrueItalic", 2);
+  color: #faebd7;
+  background-color: #4f3e4e;
+  border: 0;
+  padding: 0 10px 4px 12px;
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 0.2s;
+
+  &:active {
+    transform: translateY(1px); /* Simulates button press */
+  }
+
+  &:hover {
+    background-color: #3f2e3e; /* Slightly lighter black for hover effect */
+  }
+}
+
 .game-entry {
   display: flex;
   justify-content: space-between;
-  width: 480px;
-  margin: 16px;
-  flex: 0;
+  min-width: 512px;
+  min-height: 256px + 16px;
+
+  padding: 16px;
+
+  img {
+    margin-right: 16px;
+  }
+
+  div {
+    padding-left: 2px;
+  }
 }
 
 .game-list {
@@ -136,17 +231,20 @@ $pixel-fonts: (
 
 a {
   color: #faebd7;
-  font-family: "Mario64", serif;
-  font-size: 12px;
+  @include pixel-font("Streetwize", 2);
   text-decoration: none;
+
+  :hover {
+    cursor: pointer;
+  }
 }
 
 @each $font-name, $ignored in $pixel-fonts {
   .font-preview.#{$font-name} {
-    @include pixel-font($font-name, 1);
+    @include pixel-font($font-name, 2);
   }
   h1.font-preview.#{$font-name} {
-    @include pixel-font($font-name, 2);
+    @include pixel-font($font-name, 4);
   }
 }
 
@@ -154,53 +252,59 @@ body {
   color: #faebd7;
   overflow: hidden;
   text-transform: unset;
-  min-height: 100vh;
   background-image: url("/static/code_long_transparent.png");
+  background-color: #2f1e2e;
   background-repeat: no-repeat;
+  overflow-y: auto;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+
+  @include pixel-font("Streetwize", 2);
 
   .the-page {
-    max-width: 1024px;
-    min-width: 420px;
+    position: relative;
+    width: 80vw;
     margin-left: auto;
     margin-right: auto;
-
-    @include pixel-font("PlainPixel", 1);
+    margin-bottom: 2em;
+    transform: translateX(var(--pixel-align-offset));
   }
 
-  .the-top {
-    margin-top: 16px;
-    margin-bottom: 16px;
-    margin-left: 4px;
-    margin-right: 4px;
+  .navigation {
+    padding-top: 1em;
+    padding-bottom: 0.5em;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+
+    margin-left: 1em;
+    margin-right: 1em;
+
+    display: flex;
+    flex-wrap: wrap;
   }
 
-  .the-games {
+  .the-content {
     background-color: #4f3e4e;
+    padding: 0.5em 1.25em;
   }
 
   h1 {
-    @include pixel-font('Daydream', 2);
-  }
-
-  h2 {
-    font-size: 16px;
-  }
-
-  h3, h4 {
-    font-family: "Daydream", sans-serif;
-    word-spacing: 8px;
-    font-size: 13px;
+    @include pixel-font('Daydream', 4);
     text-transform: uppercase;
   }
 
-  &::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #2f1e2e;
-    z-index: -20;
+  @media screen and (min-width: 1080px) {
+    h1 {
+      @include pixel-font('Daydream', 6);
+      text-transform: uppercase;
+    }
+  }
+
+  h2 {
+    @include pixel-font('Daydream', 2);
+    text-transform: uppercase;
   }
 }

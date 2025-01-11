@@ -1,12 +1,21 @@
-require 'coffeescript/register'
+import FontTest from "./debug"
+
+alignToPixelGrid = (selector) ->
+  elements = document.querySelectorAll(selector) # Get all matching elements
+  for element in elements
+    rect = element.getBoundingClientRect()
+    offset = Math.round(rect.left) - rect.left
+    element.style.setProperty 'transform', "translateX(#{-offset}px)"
+
+window.addEventListener 'resize', -> alignToPixelGrid(".the-page")
 
 
 GameEntry =
   view: (vnode) ->
     game = vnode.attrs.game
 
-    <div className="game-entry">
-      <img src="https://i.redd.it/pvegyycnjkb71.jpg" width="128px" height="128px"></img>
+    <div className="game-entry pixels">
+      <img src="https://i.redd.it/pvegyycnjkb71.jpg" width="256px" height="256px"></img>
 
       <div>
         <h3>{game.metadata.game_name}</h3>
@@ -25,7 +34,7 @@ GameList =
 
   oninit: ->
     # Fetch the games when the component initializes
-    AuthenticatedApi.api.list_games()
+    Api.list_games()
       .then (data) ->
         GameList.games = data
         GameList.loading = false
@@ -47,80 +56,67 @@ GameList =
         }
       </div>
 
-#
-#AuthenticatedApi =
-#
-#  view: ->
-#    <div className="auth-container">
-#      <h1>gametank.gamess</h1>
-#      <div className="auth-buttons">
-#        <button onclick={this.login} disabled={keycloak.authenticated}>Login</button>
-#        <button onclick={this.logout} disabled={!keycloak.authenticated}>Logout</button>
-#        <button onclick={this.api.load_user_info}>User Info</button>
-#        <button onclick={this.api.create_resource}>Create Game</button>
-#      </div>
-#
-#
-#      <div className="game-section">
-#        <h2>Game List</h2>
-#        <GameList/>
-#      </div>
-#    </div>
-
 UserMenu =
-  state: {
+  state:
     initialized: false
     user_info: null
-  }
 
   oninit: ->
     Api.load_user_info().then (data) =>
       this.state.user_info = data
 
-  view: (vnode) ->
+  view: ->
     if not Api.initialized
-      <div className="userMenu">
+      <div className="user-menu">
         Initializing...
       </div>
     else if not Api.authenticated()
-      <div className="userMenu">
-        <span>Guest</span>
-        <a href="#" onclick={(e) =>
-          e.preventDefault()
-          Api.login()
-        }>Login</a>
+      <div className="user-menu">
+        <span className="username">Guest</span>
+        <div className="user-menu-buttons">
+          <button onclick={Api.login}>Login</button>
+        </div>
       </div>
     else
-      <div className="userMenu">
-        <span>Welcome, { this.state.user_info?.preferred_username or "..."}</span>
-        <a href="#" onclick={(e) =>
-          e.preventDefault()
-          console.log("logging out")
-          Api.logout()
-        }>Logout</a>
+      <div className="user-menu">
+        <span className="welcome-text">
+          Welcome, <span className="username">
+            { this.state.user_info?.preferred_username or "..."}
+          </span>
+        </span>
+        <div className="user-menu-buttons">
+          <button onclick={-> m.route.set "/profile"}>Profile</button>
+          <button onclick={Api.logout}>Logout</button>
+        </div>
       </div>
 
 import Api from './api'
 
 Site =
-  view: ->
-    <div className="the-page">
-      <div className="the-top">
-        <h1>GAMETANK.GAMES</h1>
+  onupdate: -> alignToPixelGrid ".pixels"
+
+  view: (vnode) ->
+    <div className="the-page pixels">
+      <nav className="navigation">
+        <m.route.Link className="nav-title" href={"/"}>
+          <h1>GAMETANK.GAMES</h1>
+        </m.route.Link>
         <UserMenu/>
-      </div>
-      <div className="the-games">
-          hi
+      </nav>
+      <div className="the-content">
+        { vnode.children }
       </div>
     </div>
 
 Profile =
   view: ->
-    <div><a href="/">go back</a></div>
+    <div><a href="/#!/fonts">test fonts</a></div>
 
-m.route.prefix = ""
-m.route(document.body, "/", {
-  "/": Site,
-  "/profile": Profile
-})
-
+Api.init()
+  .then ->
+    m.route document.body, "/",
+      "/": render: -> <Site><GameList/></Site>
+      "/profile": render: -> <Site><Profile/></Site>
+      "/fonts": render: -> <Site><FontTest/></Site>
+  .catch ->
+    console.log "failed to start api :)"
