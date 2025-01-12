@@ -48,17 +48,17 @@ Api =
         'Authorization': 'Bearer ' + keycloak.token
         'Content-Type': 'application/json'
 
-  create_game: (game_name, description, game_rom) ->
+  create_game: (game_name = "untitled", description = "", game_rom = []) ->
     m.request
       url: '/api/games',
       method: 'POST'
       headers:
         'Authorization': 'Bearer ' + keycloak.token
         'Content-Type': 'application/json'
-      body: JSON.stringify
-        game_name: game_name or 'Untitled Game'
-        description: description or 'No description provided.'
-        game_rom: game_rom or []
+      body:
+        game_name: game_name
+        description: description
+        game_rom: game_rom
 
   list_games: ->
     m.request

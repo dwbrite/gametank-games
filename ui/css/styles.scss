@@ -1,173 +1,54 @@
-@use "sass:map";
+@use '_fonts.scss' as fonts;
 
-@font-face {
-  font-family: 'Daydream';
-  src: url('/static/fonts/daydream_3/daydream_modified.ttf') format('truetype');
+code {
+  @include fonts.pixel('Monogram', calc(1 * var(--scale)));
+  text-transform: uppercase;
 }
 
-@font-face {
-  font-family: 'Mario64';
-  src: url('/static/fonts/mario64/Mario64.ttf') format('truetype');
+body {
+  --scale: 2;
 }
-
-@font-face {
-  font-family: 'PressStart2P';
-  src: url('/static/fonts/press_start_2p/PressStart2P.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Adventurer';
-  src: url('/static/fonts/Adventurer.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Born2bSportyV2';
-  src: url('/static/fonts/Born2bSportyV2.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'BoxyBoldv2';
-  src: url('/static/fonts/BoxyBoldv2.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'ChiKareGo2';
-  src: url('/static/fonts/ChiKareGo2.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'MK1GameGearV2';
-  src: url('/static/fonts/MK1GAMEGEARV2.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Monogram';
-  src: url('/static/fonts/monogram.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'PixelByzantine';
-  src: url('/static/fonts/PixelByzantine.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'PixelItalic';
-  src: url('/static/fonts/Pixel_Italic.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'PlainPixel';
-  src: url('/static/fonts/PlainPixel.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Seraphimb1';
-  src: url('/static/fonts/Seraphimb1.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Sonic1';
-  src: url('/static/fonts/Sonic1.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'Streetwize';
-  src: url('/static/fonts/Streetwize.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'SuperMario64';
-  src: url('/static/fonts/SuperMario64.ttf') format('truetype');
-}
-
-@font-face {
-  font-family: 'TrueItalic';
-  src: url('/static/fonts/trueitalic.ttf') format('truetype');
-}
-
-$pixel-fonts: (
-    'Adventurer':     (default-size: 16px, uppercase: false),
-    'Born2bSportyV2': (default-size: 16px, uppercase: false),
-    'BoxyBoldv2':     (default-size: 16px, uppercase: false),
-    'ChiKareGo2':     (default-size: 16px, uppercase: false),
-    'Daydream':       (default-size: 13px, uppercase: true),
-    'MK1GameGearV2':  (default-size: 16px, uppercase: false),
-    'Monogram':       (default-size: 16px, uppercase: false),
-    'PixelByzantine': (default-size: 16px, uppercase: false),
-    'PlainPixel':     (default-size: 16px, uppercase: false),
-    'PressStart2P':   (default-size: 8px, uppercase: false),
-    'Seraphimb1':     (default-size: 16px, uppercase: false),
-    'Sonic1':         (default-size: 16px, uppercase: false),
-    'Streetwize':     (default-size: 16px, uppercase: false),
-    'SuperMario64':   (default-size: 16px, uppercase: false),
-    'TrueItalic':     (default-size: 16px, uppercase: false)
-);
-
-// Mixin for reusable font styling
-@mixin pixel-font($font-name, $scale: 1) {
-  $font-data: map.get($pixel-fonts, $font-name);
-
-  @if $font-data == null {
-    @error "Font #{$font-name} is not defined in the $pixel-fonts map.";
-  }
-
-  $default-size: map.get($font-data, default-size);
-  $uppercase: map.get($font-data, uppercase);
-
-  font-family: $font-name, sans-serif;
-  font-size: calc(#{$default-size} * #{$scale});
-  line-height: 1;
-
-  @if $uppercase {
-    text-transform: uppercase;
-  }
-}
-
 
 .navigation {
   @media screen and (min-width: 1080px) {
     h1 {
-      @include pixel-font('Daydream', 6);
+      @include fonts.pixel('Daydream', calc(3 * var(--scale)));
       text-transform: uppercase;
     }
 
     .user-menu {
       text-align: right;
-      margin-right: 4px;
+      margin-right: 0.25em;
       margin-left: auto;
 
       .welcome-text {
-        margin-right: 1px;
+        margin-right: 0.125em;
       }
 
       button {
-        margin: 8px 0 8px 8px;
+        margin: 0.5em 0 0.5em 0.5em;
       }
     }
   }
 
   @media screen and (max-width: 1080px) {
     h1 {
-      @include pixel-font('Daydream', 4);
+      @include fonts.pixel('Daydream', calc(2 * var(--scale)));
       text-transform: uppercase;
     }
 
     .user-menu {
       text-align: left;
-      margin-left: 4px;
+      margin-left: 0.25em;
 
       .welcome-text {
-        margin-left: 4px;
+        margin-left: 0.25em;
       }
 
       button {
-        margin: 8px 8px 8px 0;
+        margin: 0.5em 0.5em 0.5em 0;
       }
     }
-  }
-
-  h1 {
-    @include pixel-font('Daydream', 4);
-    text-transform: uppercase;
   }
 
   .user-menu {
@@ -175,10 +56,10 @@ $pixel-fonts: (
     display: flex;
     flex-direction: column;
 
-    @include pixel-font("TrueItalic", 2);
+    @include fonts.pixel("TrueItalic", calc(1 * var(--scale)));
 
     .username {
-      @include pixel-font("Streetwize", 2);
+      @include fonts.pixel("Streetwize", calc(1 * var(--scale)));
     }
 
     .user-menu-buttons {
@@ -187,15 +68,39 @@ $pixel-fonts: (
   }
 }
 
+// rules! Use EMs for as many units as you can.
+// Be careful when mixing EMs and pixels!
+// EMs are naturally scaled to the font size, whereas pixels need to be multiplied by scale.
+// Never do (em + px) * scale
+
 button {
-  @include pixel-font("TrueItalic", 2);
+  @include fonts.pixel("TrueItalic", calc(1 * var(--scale)));
   color: #faebd7;
   background-color: #4f3e4e;
   border: 0;
-  padding: 0 10px 4px 12px;
+  padding: 0;
   cursor: pointer;
   outline: none;
   transition: box-shadow 0.2s;
+  position:relative;
+
+  min-width: calc(1em + (1px * var(--scale)));
+  height: calc(1em + (1px * var(--scale)));
+  max-height: calc(1em + (1px * var(--scale)));
+
+
+  & > code {
+    display: inline-flex;
+    transform: translateY(calc(-1px * var(--scale)));
+    padding-left: calc(1px * var(--scale));
+  }
+
+  & > span {
+    display: inline-flex;
+    padding-left: calc(6px * var(--scale));
+    padding-right: calc(5px * var(--scale));
+    transform: translateY(calc(-1px * var(--scale)));
+  }
 
   &:active {
     transform: translateY(1px); /* Simulates button press */
@@ -206,45 +111,43 @@ button {
   }
 }
 
-.game-entry {
-  display: flex;
-  justify-content: space-between;
-  min-width: 512px;
-  min-height: 256px + 16px;
-
-  padding: 16px;
-
-  img {
-    margin-right: 16px;
-  }
-
-  div {
-    padding-left: 2px;
-  }
-}
-
 .game-list {
-  display: flex;
-  justify-content: space-evenly;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc((464px) * var(--scale)), max-content));
+  grid-gap: 16px;
+  padding: initial;
+  justify-content: center;
+
+  .game-entry {
+    list-style-type: none;
+    width: calc((464px) * var(--scale));
+    min-height: calc((128px) * var(--scale));
+    display: flex;
+    margin: 1em;
+
+    padding: calc(8px * var(--scale));
+
+    img.thumbnail {
+      width: calc(128px * var(--scale));
+      height: calc(128px * var(--scale));
+      margin-right: calc(8px * var(--scale));
+    }
+
+    div {
+      padding-left: calc(1px * var(--scale));
+    }
+  }
 }
+
+
 
 a {
   color: #faebd7;
-  @include pixel-font("Streetwize", 2);
+  @include fonts.pixel("Streetwize", 2);
   text-decoration: none;
 
   :hover {
     cursor: pointer;
-  }
-}
-
-@each $font-name, $ignored in $pixel-fonts {
-  .font-preview.#{$font-name} {
-    @include pixel-font($font-name, 2);
-  }
-  h1.font-preview.#{$font-name} {
-    @include pixel-font($font-name, 4);
   }
 }
 
@@ -262,7 +165,7 @@ body {
   flex-direction: column;
   margin: 0;
 
-  @include pixel-font("Streetwize", 2);
+  @include fonts.pixel("Streetwize", calc(1 * var(--scale)));
 
   .the-page {
     position: relative;
@@ -287,24 +190,7 @@ body {
   }
 
   .the-content {
-    background-color: #4f3e4e;
+    //background-color: #4f3e4e;
     padding: 0.5em 1.25em;
-  }
-
-  h1 {
-    @include pixel-font('Daydream', 4);
-    text-transform: uppercase;
-  }
-
-  @media screen and (min-width: 1080px) {
-    h1 {
-      @include pixel-font('Daydream', 6);
-      text-transform: uppercase;
-    }
-  }
-
-  h2 {
-    @include pixel-font('Daydream', 2);
-    text-transform: uppercase;
   }
 }
