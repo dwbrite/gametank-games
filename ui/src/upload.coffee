@@ -36,7 +36,7 @@ Upload =
           type="file"
           id="rom"
           name="rom"
-          accept=".rom"
+          accept=".gtr"
           onchange={(e) => Upload.rom = e.target.files[0]}
         />
       </div>

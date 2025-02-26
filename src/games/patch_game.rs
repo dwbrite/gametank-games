@@ -27,8 +27,6 @@ pub async fn patch_game(
     Path(game_id): Path<Uuid>,
     Json(input): Json<GameEntryPatch>,
 ) -> Result<(StatusCode, Json<GameEntryMetadata>), (StatusCode, String)> {
-    
-    
-
+    // TODO: edit game
     Err((StatusCode::OK, "Ugh".to_string()))
 }

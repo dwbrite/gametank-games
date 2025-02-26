@@ -7,7 +7,7 @@ edition = "2021"
 # web server / async
 tokio = { version = "1.41.1",  features = ["rt-multi-thread"] }
 axum = { version = "0.7.7", features = ["macros"] }
-tower-http = { version = "0.6.2", features = ["fs"] }
+tower-http = { version = "0.6.2", features = ["fs", "limit", "cors"] }
 reqwest = { version = "0.12.9", features = ["json"] }
 utoipa = { version = "5.2.0", features = ["chrono", "uuid"] }
 utoipa-swagger-ui = "8.0.3"

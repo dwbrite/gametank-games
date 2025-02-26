@@ -22,7 +22,7 @@ Api =
 
     Api.init_promise = (() =>
       try
-        await keycloak.init onLoad: 'check-sso', responseMode: 'query'
+        await keycloak.init onLoad: 'check-sso', responseMode: 'query', checkLoginIframe: false
         Api.initialized = true
         console.log 'Keycloak initialized'
       catch err
@@ -59,6 +59,7 @@ Api =
         game_name: game_name
         description: description
         game_rom: game_rom
+        public_access: true # TODO: add public access parameter
 
   list_games: ->
     m.request

@@ -8,8 +8,10 @@ use darn_authorize_macro::authorize;
 use crate::AppState;
 use crate::auth::{DefaultNamespace, KeycloakUserInfo, RoleMarker, SiteRoles};
 use crate::auth::SitePermissions;
+use crate::auth::SiteRoles::{Guest, User};
 use crate::darn::{Darn};
 use crate::games::{GameEntryCreate, GameEntryMetadata, GameEntryMetadataDisplay, GAME_NS};
+use crate::games::game_roles::GamePermissions::View;
 use crate::games::game_roles::GameRoles;
 
 #[utoipa::path(
@@ -39,8 +41,8 @@ pub async fn create_game(
     let metadata = query_as!(
         GameEntryMetadata,
         r#"
-        INSERT INTO game_entries (game_id, game_name, description, game_rom, author)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO game_entries (game_id, game_name, description, game_rom, author, public_access)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING
           game_id,
           game_name,
@@ -54,6 +56,7 @@ pub async fn create_game(
         input.description,
         input.game_rom,
         author_uuid,
+        input.public_access,
     )
         .fetch_one(&app_state.pg_pool)
         .await
@@ -63,8 +66,13 @@ pub async fn create_game(
         })?;
 
     let game_darn = Darn::with_namespace(GAME_NS, &metadata.game_id.to_string());
-    GameRoles::create_roles_in_namespace(&app_state.casbin, game_darn).await;
-    
+    GameRoles::create_roles_in_namespace(&app_state.casbin, &game_darn).await;
+
+    if input.public_access {
+        app_state.casbin.add_allow_policy(&User.to_darn_role(), View, &game_darn).await;
+        app_state.casbin.add_allow_policy(&Guest.to_darn_role(), View, &game_darn).await;
+    }
+
     let metadata = metadata.humanize(&app_state).await;
 
     Ok((StatusCode::CREATED, Json(metadata)))

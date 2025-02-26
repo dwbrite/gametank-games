@@ -1,4 +1,5 @@
 import FontTest from "./debug"
+import RustEmu from "./emu"
 
 alignToPixelGrid = (selector) ->
   elements = document.querySelectorAll(selector) # Get all matching elements
@@ -30,7 +31,9 @@ GameEntry =
       <img className="thumbnail" src="https://i.redd.it/pvegyycnjkb71.jpg"></img>
 
       <div>
-        <h3>{game.metadata.game_name}</h3>
+        <m.route.Link href={"/game/" + game.metadata.game_id}>
+          <h3>{game.metadata.game_name}</h3>
+        </m.route.Link>
         <a className="author_name" href={"/users/" + game.metadata.author}>{game.author_name}</a>
 
         <p>{game.metadata.description}</p>
@@ -154,11 +157,32 @@ UserMenu =
 import Api from './api'
 import Upload from './upload'
 
+import init, {update_rom_data, request_close} from './bin/gametank-emu-rs'
+
+
+ShadowCanvas =
+  oncreate: (vnode) ->
+    host = vnode.dom
+    # Create a shadow root in "open" mode so you can access it from JS
+    shadow = host.attachShadow({mode: "open"})
+    host.style.visibility = "hidden"  # Hide the host initially
+    host.style.position = "absolute"
+    canvas = document.createElement("canvas")
+    canvas.id = "gt-canvas"
+    canvas.width = 256
+    canvas.height = 256
+    shadow.appendChild(canvas)
+    requestAnimationFrame -> init()
+
+  view: ->
+    <div id="shadow-host"></div>
+
 Site =
   oninit: ->
     savedScale = parseFloat(localStorage.getItem("scale")) or 2
     document.body.style.setProperty "--scale", savedScale
     window.onresize = -> alignToPixelGrid ".pixels, div, span"
+
 
   onupdate: -> alignToPixelGrid ".pixels, div"
 
@@ -170,6 +194,7 @@ Site =
         </m.route.Link>
         <UserMenu/>
       </nav>
+      <ShadowCanvas/>
       <div className="the-content">
         { vnode.children }
       </div>
@@ -178,6 +203,7 @@ Site =
 Profile =
   view: ->
     <div><a href="/#!/fonts">test fonts</a></div>
+    <div><a href="/#!/emu">test emu</a></div>
 
 Api.init()
   .then ->
@@ -186,5 +212,6 @@ Api.init()
       "/upload": render: -> <Site><Upload/></Site>
       "/profile": render: -> <Site><Profile/></Site>
       "/fonts": render: -> <Site><FontTest/></Site>
+      "/game/:game_id": render: ({attrs}) -> <Site><RustEmu gameId={attrs.game_id}/></Site>
   .catch ->
     console.log "failed to start api :)"

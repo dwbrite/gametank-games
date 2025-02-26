@@ -1,6 +1,7 @@
 mod game_roles;
 pub mod create_game;
 pub mod patch_game;
+pub mod get_game;
 
 use std::sync::Arc;
 use axum::{Extension, Json};
@@ -23,6 +24,7 @@ pub struct GameEntryCreate {
     pub game_name: String,
     pub description: String,
     pub game_rom: Vec<u8>,
+    pub public_access: bool,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -30,6 +32,7 @@ pub struct GameEntryPatch {
     pub _game_name: Option<String>,
     pub _description: Option<String>,
     pub _game_rom: Option<Vec<u8>>,
+    pub _public_access: Option<bool>,
 }
 
 #[derive(Debug, FromRow, ToSchema, Serialize, Deserialize)]
@@ -37,9 +40,11 @@ pub struct GameEntryData {
     pub game_id: Uuid,
     pub game_name: String,
     pub author: Uuid,
+    pub description: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub game_rom: Vec<u8>,
+    pub public_access: bool,
 }
 
 
@@ -102,6 +107,7 @@ pub async fn list_public_games(
             updated_at
         FROM
             game_entries
+        WHERE public_access
         ORDER BY
             created_at DESC
         "#

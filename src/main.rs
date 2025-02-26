@@ -14,13 +14,17 @@ use axum::routing::{get_service, post};
 use sqlx::{migrate, PgPool};
 use std::sync::Arc;
 use axum::extract::{Request, State};
+use axum_core::extract::DefaultBodyLimit;
 use reqwest::Client;
 use serde_json::json;
 use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
+use http::Method;
+use tower_http::limit::{RequestBodyLimit, RequestBodyLimitLayer};
 use auth::authn_keycloak::KeycloakUserInfo;
 use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
 use crate::games::create_game::{create_game};
+use crate::games::get_game::get_game;
 use crate::games::list_public_games;
 use crate::games::patch_game::patch_game;
 
@@ -53,13 +57,22 @@ async fn main() {
         reqwest: Client::new(),
     });
 
+    use tower_http::cors::{CorsLayer, Any};
+    
     // route endpoints
     let api_router = Router::new()
         .route("/user-info", get(get_user_info))
+        .route("/games/:game_id", post(patch_game))
+        .route("/games/:game_id", get(get_game))
         .route("/games", get(list_public_games))
         .route("/games", post(create_game))
-        .route("/games/{game_id}", post(patch_game))
         .layer(axum::middleware::from_fn_with_state(appstate.clone(), authn_keycloak_middleware))
+        .layer(DefaultBodyLimit::max(10 * 1024 * 1024)) // TODO: this may be 1000x too big
+        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
+        .layer(CorsLayer::new()
+            .allow_origin(Any) // Adjust your frontend port
+            .allow_methods([Method::GET, Method::POST])
+            .allow_headers(Any))
         .with_state(appstate.clone());
 
     // build our application with a route
