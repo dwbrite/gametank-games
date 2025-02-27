@@ -13,23 +13,25 @@ use axum::response::IntoResponse;
 use axum::routing::{get_service, post};
 use sqlx::{migrate, PgPool};
 use std::sync::Arc;
-use axum::extract::{Request, State};
+use axum::extract::{Path, Request, State};
 use axum_core::extract::DefaultBodyLimit;
 use reqwest::Client;
 use serde_json::json;
 use tower_http::services::{ServeDir, ServeFile};
 use dotenvy::dotenv;
 use http::Method;
+use keycloak::types::TypeString;
 use tower_http::limit::{RequestBodyLimit, RequestBodyLimitLayer};
+use uuid::Uuid;
 use auth::authn_keycloak::KeycloakUserInfo;
-use crate::auth::{authn_keycloak_middleware, init_casbin, init_keycloak, Casbin, KeycloakClient};
+use darn_authorize_macro::authorize;
+use crate::auth::{authn_keycloak_middleware, init_casbin, Casbin, KeycloakClient};
 use crate::games::create_game::{create_game};
 use crate::games::get_game::get_game;
-use crate::games::list_public_games;
+use crate::games::{list_public_games, GameEntryData};
 use crate::games::patch_game::patch_game;
 
 pub struct AppState {
-    pub keycloak: KeycloakClient,
     pub casbin: Casbin,
     pub pg_pool: PgPool,
     pub reqwest: Client,
@@ -51,7 +53,6 @@ async fn main() {
     migrate!().run(&pool).await.expect("Failed to run migrations");
 
     let appstate = Arc::new(AppState {
-        keycloak: init_keycloak().await,
         casbin: init_casbin(database_url).await,
         pg_pool: pool,
         reqwest: Client::new(),
@@ -103,4 +104,17 @@ async fn get_user_info(
 }
 
 
-
+// #[debug_handler]
+// async fn get_user_info_by_id(
+//     State(app_state): State<Arc<AppState>>,
+//     Extension(user_info): Extension<KeycloakUserInfo>,
+//     Path(game_id): Path<Uuid>,
+//     _request: Request,
+// ) -> impl IntoResponse {
+//
+//     let result = app_state.keycloak.admin.realm_users_with_user_id_get(
+//         &app_state.keycloak.realm,
+//         &self.author.to_string(),
+//         None
+//     ).await.unwrap_or_default().username.unwrap_or(TypeString::from("unknown")).to_string();
+// }

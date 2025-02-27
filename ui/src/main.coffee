@@ -4,7 +4,7 @@ import RustEmu from "./emu"
 alignToPixelGrid = (selector) ->
   elements = document.querySelectorAll(selector) # Get all matching elements
   for element in elements
-# Temporarily remove any inline transform
+    # Temporarily remove any inline transform
     inlineTransform = element.style.transform
     element.style.transform = ''
 
@@ -21,7 +21,7 @@ alignToPixelGrid = (selector) ->
 
     # Restore the original inline transform (if necessary)
     if inlineTransform
-      element.style.transform = "#{element.style.transform} #{inlineTransform}"
+      element.style.transform = "#{element.style.transform}"
 
 GameEntry =
   view: (vnode) ->
@@ -34,11 +34,12 @@ GameEntry =
         <m.route.Link href={"/game/" + game.metadata.game_id}>
           <h3>{game.metadata.game_name}</h3>
         </m.route.Link>
-        <a className="author_name" href={"/users/" + game.metadata.author}>{game.author_name}</a>
-
+        <m.route.Link className="author_name" href={"/user/" + game.metadata.author}>
+          {game.author_name}, {game.metadata.created_at.split('T')[0]}
+        </m.route.Link>
+        <hr/>
         <p>{game.metadata.description}</p>
 
-        <p>Created At: {new Date(game.metadata.created_at).toLocaleString()}</p>
       </div>
     </li>
 
@@ -169,8 +170,6 @@ ShadowCanvas =
     host.style.position = "absolute"
     canvas = document.createElement("canvas")
     canvas.id = "gt-canvas"
-    canvas.width = 256
-    canvas.height = 256
     shadow.appendChild(canvas)
     requestAnimationFrame -> init()
 
@@ -181,6 +180,10 @@ Site =
   oninit: ->
     savedScale = parseFloat(localStorage.getItem("scale")) or 2
     document.body.style.setProperty "--scale", savedScale
+
+    savedScale = parseFloat(localStorage.getItem("emu-scale")) or 3
+    document.body.style.setProperty "--emu-scale", savedScale
+
     window.onresize = -> alignToPixelGrid ".pixels, div, span"
 
 

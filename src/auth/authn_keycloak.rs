@@ -6,6 +6,7 @@ use axum_core::extract::Request;
 use axum_core::response::Response;
 use http::header;
 use keycloak::{KeycloakAdmin, KeycloakAdminToken};
+use keycloak::types::TypeString;
 use reqwest::Client;
 use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
@@ -20,30 +21,40 @@ pub struct KeycloakClient {
     client_url: String,
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_used)] // expect/unwrap justified on initialization
-pub async fn init_keycloak() -> KeycloakClient {
-    let url: String = env::var("KEYCLOAK_URL").unwrap();
-    let user: String = env::var("KEYCLOAK_ADMIN_USER").unwrap();
-    let password: String = env::var("KEYCLOAK_ADMIN_PASSWORD").unwrap();
-    let client_url: String = env::var("KEYCLOAK_CLIENT_URL").unwrap();
-    let realm = "gametank-games";
-    let client_id = "authz-backend".into();
+impl KeycloakClient {
+    #[allow(clippy::expect_used, clippy::unwrap_used)] // expect/unwrap justified on initialization
+    pub async fn init() -> Self {
+        let url: String = env::var("KEYCLOAK_URL").unwrap();
+        let user: String = env::var("KEYCLOAK_ADMIN_USER").unwrap();
+        let password: String = env::var("KEYCLOAK_ADMIN_PASSWORD").unwrap();
+        let client_url: String = env::var("KEYCLOAK_CLIENT_URL").unwrap();
+        let realm = "gametank-games";
+        let client_id = "authz-backend".into();
 
-    let client = reqwest::Client::new();
-    let admin_token = KeycloakAdminToken::acquire(&url, &user, &password, &client).await.unwrap();
-    let admin = KeycloakAdmin::new(&url, admin_token, client);
+        let client = reqwest::Client::new();
+        let token = KeycloakAdminToken::acquire(&url, &user, &password, &client).await.unwrap();
+        let admin = KeycloakAdmin::new(&url, token.clone(), client);
 
-    let backend_client = admin.realm_clients_get(realm, Some(client_id), None, None, None, None, None).await.unwrap().first().unwrap().clone();
-    let client_uuid = backend_client.id.unwrap();
+        let backend_client = admin.realm_clients_get(realm, Some(client_id), None, None, None, None, None).await.unwrap().first().unwrap().clone();
+        let client_uuid = backend_client.id.unwrap();
 
-    KeycloakClient {
-        admin,
-        realm: realm.to_string(),
-        client_uuid,
-        client_url,
+        KeycloakClient {
+            admin,
+            realm: realm.to_string(),
+            client_uuid,
+            client_url,
+        }
+    }
+
+    pub async fn get_username(user_id: String) -> String {
+        let keycloak = KeycloakClient::init().await;
+        keycloak.admin.realm_users_with_user_id_get(
+            &keycloak.realm,
+            &user_id,
+            None
+        ).await.unwrap_or_default().username.unwrap_or(TypeString::from("unknown")).to_string()
     }
 }
-
 
 pub async fn authn_keycloak_middleware(
     State(app): State<Arc<AppState>>,
@@ -69,7 +80,8 @@ pub async fn authn_keycloak_middleware(
 
     if let Some(token) = maybe_token {
         let token = token.trim_start_matches("Bearer ").to_string();
-        if let Ok(response) = client.get(&app.keycloak.client_url).bearer_auth(token).send().await {
+        let client_url = KeycloakClient::init().await.client_url;
+        if let Ok(response) = client.get(&client_url).bearer_auth(token).send().await {
             if response.status().is_success() {
                 #[allow(clippy::expect_used)]{
                     user_info = response.json::<KeycloakUserInfo>().await.expect("Successful response from keycloak implies we get UserInfo. If this isn't true, then, fuck me I guess.");

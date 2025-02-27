@@ -16,7 +16,7 @@ use http::StatusCode;
 use keycloak::types::TypeString;
 use darn_authorize_macro::authorize;
 use crate::AppState;
-use crate::auth::{DefaultNamespace, KeycloakUserInfo, SitePermissions, SiteRoles};
+use crate::auth::{DefaultNamespace, KeycloakClient, KeycloakUserInfo, SitePermissions, SiteRoles};
 
 #[derive(Debug, Deserialize, ToSchema)]
 
@@ -60,15 +60,10 @@ pub struct GameEntryMetadata {
 
 impl GameEntryMetadata {
     pub async fn humanize(self, app_state: &Arc<AppState>) -> GameEntryMetadataDisplay {
-        let result = app_state.keycloak.admin.realm_users_with_user_id_get(
-            &app_state.keycloak.realm,
-            &self.author.to_string(),
-            None
-        ).await.unwrap_or_default().username.unwrap_or(TypeString::from("unknown")).to_string();
-
+        let author_name = KeycloakClient::get_username(self.author.to_string()).await;
         GameEntryMetadataDisplay {
             metadata: self,
-            author_name: result,
+            author_name,
         }
     }
 }

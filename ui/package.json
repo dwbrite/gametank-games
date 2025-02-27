@@ -9,7 +9,8 @@
     "watch:webpack": "webpack --watch --mode development",
     "watch:sass": "sass --watch css/styles.scss:../target/ui/styles.css",
     "watch:public": "cpx \"public/**/*\" ../target/ui --watch",
-    "watch": "concurrently \"npm run watch:webpack\" \"npm run watch:sass\" \"npm run watch:public\""
+    "watch": "concurrently \"npm run watch:webpack\" \"npm run watch:sass\" \"npm run watch:public\"",
+    "build": "concurrently \"npm run build:webpack\" \"npm run build:sass\" \"npm run build:public\""
   },
   "keywords": [],
   "author": "",

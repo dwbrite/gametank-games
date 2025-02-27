@@ -7,6 +7,7 @@ code {
 
 body {
   --scale: 2;
+  --emu-scale: 3;
 }
 
 .navigation {
@@ -68,6 +69,12 @@ body {
   }
 }
 
+.controls {
+  button {
+    margin: 0.5625em 0.5em 0.5em 0;
+  }
+}
+
 // rules! Use EMs for as many units as you can.
 // Be careful when mixing EMs and pixels!
 // EMs are naturally scaled to the font size, whereas pixels need to be multiplied by scale.
@@ -88,7 +95,6 @@ button {
   height: calc(1em + (1px * var(--scale)));
   max-height: calc(1em + (1px * var(--scale)));
 
-n
   & > code {
     display: inline-flex;
     transform: translateY(calc(-1px * var(--scale)));
@@ -109,6 +115,45 @@ n
   &:hover {
     background-color: #3f2e3e; /* Slightly lighter black for hover effect */
   }
+}
+
+
+.rust-emu {
+  display: flex;
+  justify-content: center;
+  flex-flow: column;
+  align-items: center;
+
+  width: 768px;
+  max-width: 768px;
+  margin-left: auto;
+  margin-right: auto;
+
+  .metadata {
+    width: 100%;
+  }
+}
+
+.emulator-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  @include fonts.pixel("Streetwize", calc(1 * var(--scale)));
+
+  .emu-game-titlebar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+#gt-canvas {
+  width: calc(128px * var(--emu-scale)) !important;
+  height: calc(128px * var(--emu-scale)) !important;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1em;
+  margin-bottom:1em;
 }
 
 .game-list {
@@ -133,8 +178,11 @@ n
       margin-right: calc(8px * var(--scale));
     }
 
+    background-color: #433442;
+
     div {
       padding-left: calc(1px * var(--scale));
+      width: 100%;
     }
   }
 }
@@ -143,7 +191,7 @@ n
 
 a {
   color: #faebd7;
-  @include fonts.pixel("Streetwize", 2);
+  @include fonts.pixel("Streetwize", calc(1 * var(--scale)));
   text-decoration: none;
 
   :hover {
@@ -165,7 +213,11 @@ body {
   flex-direction: column;
   margin: 0;
 
-  @include fonts.pixel("Streetwize", calc(1 * var(--scale)));
+  hr {
+    border-top: 1px;
+  }
+
+  @include fonts.pixel("PressStart2P", calc(1 * var(--scale)));
 
   .the-page {
     position: relative;
@@ -192,5 +244,9 @@ body {
   .the-content {
     //background-color: #4f3e4e;
     padding: 0.5em 1.25em;
+  }
+
+  h2, h3 {
+    @include fonts.pixel("BoxyBoldv2", calc(2 * var(--scale)));
   }
 }
