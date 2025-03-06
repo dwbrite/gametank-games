@@ -86,9 +86,11 @@ async fn main() {
             get_service(ServeFile::new("./target/ui/index.html"))
         );
 
+    println!("creating listener...");
 
     // expect/unwrap justified for initialization
     let listener = tokio::net::TcpListener::bind("0.0.0.0:41123").await.expect("Can not bind to address");
+    println!("serving listener");
     axum::serve(listener, app).await.unwrap();
 }
 

@@ -17,17 +17,15 @@ FROM node:20 AS frontend-builder
 
 WORKDIR /app/ui
 
-# Copy frontend files
-COPY ui/package.json ui/package-lock.json ./
-RUN npm install
-
 COPY ui ./
+RUN npm install
 RUN npm run build
 
 # Stage 3: Final runtime image
 FROM debian:bookworm-slim AS runtime
 
-RUN apt-get update && apt install -y openssl
+RUN apt-get update && apt install -y openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -35,9 +33,8 @@ WORKDIR /app
 COPY --from=builder /app/target/release/gametank-games ./gametank-games
 
 # Copy frontend assets
-COPY --from=frontend-builder /app/ui/dist ./target/ui
+COPY --from=frontend-builder /app/target ./target
 
-# Expose the port the app runs on (change if needed)
 EXPOSE 41123
 
 # Run the application

@@ -7,7 +7,7 @@ RustEmu =
 
   fetchGameData: (vnode, game_id) ->
     try
-      response = await fetch "http://localhost:41123/api/games/#{game_id}"
+      response = await fetch "/api/games/#{game_id}"
       throw new Error "HTTP error! Status: #{response.status}" unless response.ok
 
       json = await response.json()
