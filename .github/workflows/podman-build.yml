@@ -1,0 +1,38 @@
+name: Build and Push with Podman
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt update
+          sudo apt install -y podman
+          podman --version
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKERHUB_PAT }}" | podman login docker.io -u "dwbrite" --password-stdin
+
+      - name: Build the Image
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          IMAGE_NAME="docker.io/dwbrite/gametank-games"
+
+          podman build -t $IMAGE_NAME:latest -t $IMAGE_NAME:$COMMIT_HASH .
+
+      - name: Push Images to Docker Hub
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          IMAGE_NAME="docker.io/dwbrite/gametank-games"
+
+          podman push $IMAGE_NAME:latest
+          podman push $IMAGE_NAME:$COMMIT_HASH
