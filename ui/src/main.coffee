@@ -110,7 +110,7 @@ UserMenu =
         action: -> m.route.set "/profile"
       upload:
         label: <span>Upload</span>
-        action: -> m.route.set "/upload"
+        action: ->  m.route.set "/upload"
       logout:
         label: <span>Logout</span>
         action: Api.logout

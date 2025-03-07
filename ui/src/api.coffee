@@ -61,6 +61,25 @@ Api =
         game_rom: game_rom
         public_access: true # TODO: add public access parameter
 
+  get_game: (game_id) ->
+    m.request
+      url: '/api/games/' + game_id
+      method: 'GET'
+      headers:
+        'Authorization': 'Bearer ' + keycloak.token
+        'Content-Type': 'application/json'
+
+  get_game_rom: (game_id) ->
+    m.request
+      url: '/api/games/' + game_id + '/rom'
+      method: 'GET'
+      headers:
+        'Authorization': 'Bearer ' + keycloak.token
+      config: (xhr) ->
+        xhr.responseType = "arraybuffer"
+        xhr
+
+
   list_games: ->
     m.request
       url: '/api/games',

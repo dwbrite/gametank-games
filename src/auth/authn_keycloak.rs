@@ -5,8 +5,9 @@ use axum::middleware::Next;
 use axum_core::extract::Request;
 use axum_core::response::Response;
 use http::header;
-use keycloak::{KeycloakAdmin, KeycloakAdminToken};
-use keycloak::types::TypeString;
+use keycloak::{KeycloakAdmin, KeycloakAdminToken, KeycloakError};
+use keycloak::types::{TypeString, UserRepresentation};
+use log::error;
 use reqwest::Client;
 use utoipa::ToSchema;
 use serde::{Deserialize, Serialize};
@@ -48,11 +49,30 @@ impl KeycloakClient {
 
     pub async fn get_username(user_id: String) -> String {
         let keycloak = KeycloakClient::init().await;
-        keycloak.admin.realm_users_with_user_id_get(
+
+        match keycloak.admin.realm_users_with_user_id_get(
             &keycloak.realm,
             &user_id,
             None
-        ).await.unwrap_or_default().username.unwrap_or(TypeString::from("unknown")).to_string()
+        ).await {
+            Ok(response) => {
+                let username = response.username
+                    .unwrap_or(TypeString::from("unknown"))
+                    .to_string();
+
+                let truncated_username = if username.len() > 32 {
+                    format!("{}...", &username[..29])
+                } else {
+                    username
+                };
+
+                truncated_username
+            }
+            Err(err) => {
+                error!("uid: {} - {:?}", &user_id, err);
+                "unknown".to_string()
+            }
+        }
     }
 }
 

@@ -27,7 +27,7 @@ use auth::authn_keycloak::KeycloakUserInfo;
 use darn_authorize_macro::authorize;
 use crate::auth::{authn_keycloak_middleware, init_casbin, Casbin, KeycloakClient};
 use crate::games::create_game::{create_game};
-use crate::games::get_game::get_game;
+use crate::games::get_game::{get_game, get_game_rom};
 use crate::games::{list_public_games, GameEntryData};
 use crate::games::patch_game::patch_game;
 
@@ -65,6 +65,7 @@ async fn main() {
         .route("/user-info", get(get_user_info))
         .route("/games/:game_id", post(patch_game))
         .route("/games/:game_id", get(get_game))
+        .route("/games/:game_id/rom", get(get_game_rom))
         .route("/games", get(list_public_games))
         .route("/games", post(create_game))
         .layer(axum::middleware::from_fn_with_state(appstate.clone(), authn_keycloak_middleware))
