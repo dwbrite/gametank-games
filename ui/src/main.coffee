@@ -196,11 +196,18 @@ Site =
           <h1>GAMETANK.GAMES</h1>
         </m.route.Link>
         <UserMenu/>
+        <SisterLinks/>
       </nav>
       <ShadowCanvas/>
       <div className="the-content">
         { vnode.children }
       </div>
+    </div>
+
+SisterLinks =
+  view: (vnode) ->
+    <div>
+      <a href="https://gametank.zone">GameTank Zone</a>
     </div>
 
 Profile =
