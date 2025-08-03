@@ -196,8 +196,8 @@ Site =
           <h1>GAMETANK.GAMES</h1>
         </m.route.Link>
         <UserMenu/>
-        <SisterLinks/>
       </nav>
+      <SisterLinks/>
       <ShadowCanvas/>
       <div className="the-content">
         { vnode.children }
