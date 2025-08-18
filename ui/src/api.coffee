@@ -88,6 +88,14 @@ Api =
         'Authorization': 'Bearer ' + keycloak.token
         'Content-Type': 'application/json'
 
+  list_some_jabronis_games: (user_id) ->
+    m.request
+      url: '/api/games/by-uwuser/' + user_id,
+      method: 'GET'
+      headers:
+        'Authorization': 'Bearer ' + keycloak.token
+        'Content-Type': 'application/json'
+
 # Shim for token refresh
 shimApiWithTokenRefresh = (api, keycloak) ->
   shimmedApi = {}

@@ -47,10 +47,12 @@ GameList =
   games: []       # Initialize an empty array to hold game data
   loading: true   # Loading state
   error: null     # Error state
+  author_name : null
 
-  oninit: ->
+  oncreate: (vnode) ->
     # Fetch the games when the component initializes
-    Api.list_games()
+    if vnode.attrs.userId then GameList.author_name = vnode.attrs.userId else GameList.author_name = null
+    (if vnode.attrs.userId then Api.list_some_jabronis_games(vnode.attrs.userId) else Api.list_games())
       .then (data) ->
         GameList.games = data
         GameList.loading = false
@@ -58,7 +60,7 @@ GameList =
         GameList.error = "Failed to load games."
         GameList.loading = false
 
-  view: ->
+  view: (vnode) ->
     <div className="game-list-container">{
       if GameList.loading
         <div className="loading">Loading games...</div>
@@ -67,11 +69,14 @@ GameList =
       else if GameList.games.length == 0
         <div>No games available.</div>
       else
-        <ul className="game-list">
-          {GameList.games.map (game) ->
-            <GameEntry game={game}/>
-          }
-        </ul>
+        <div>
+          {if GameList.author_name then <div>Games by {GameList.author_name}</div>}
+          <ul className="game-list">
+            {GameList.games.map (game) ->
+              <GameEntry game={game}/>
+            }
+          </ul>
+        </div>
     }</div>
 
 UserMenu =
@@ -211,9 +216,22 @@ SisterLinks =
     </div>
 
 Profile =
+  state:
+    user_info: null
+    asdf: null
+  oninit: ->
+    Api.load_user_info().then (data) =>
+      this.state.user_info = data
   view: ->
-    <div><a href="/#!/fonts">test fonts</a></div>
-    <div><a href="/#!/emu">test emu</a></div>
+    <div>
+      <div>{this.state.user_info?.preferred_username or "..."}</div>
+      <br/>
+      <br/>
+      <div>{this.state.user_info?.email or ""}</div>
+      <br/>
+      <br/>
+      <a href="https://keycloak.dwbrite.com/realms/gametank-games/account/#/personal-info"><u>Edit</u></a>
+    </div>
 
 Api.init()
   .then ->
@@ -223,5 +241,6 @@ Api.init()
       "/profile": render: -> <Site><Profile/></Site>
       "/fonts": render: -> <Site><FontTest/></Site>
       "/game/:game_id": render: ({attrs}) -> <Site><RustEmu gameId={attrs.game_id}/></Site>
+      "/user/:user_id": render: ({attrs}) -> <Site><GameList key="bepis" userId={attrs.user_id}/></Site>
   .catch ->
     console.log "failed to start api :)"

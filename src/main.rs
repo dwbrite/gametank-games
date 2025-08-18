@@ -28,7 +28,7 @@ use darn_authorize_macro::authorize;
 use crate::auth::{authn_keycloak_middleware, init_casbin, Casbin, KeycloakClient};
 use crate::games::create_game::{create_game};
 use crate::games::get_game::{get_game, get_game_rom};
-use crate::games::{list_public_games, GameEntryData};
+use crate::games::{list_public_games, list_public_games_by_user, GameEntryData};
 use crate::games::patch_game::patch_game;
 
 pub struct AppState {
@@ -67,6 +67,7 @@ async fn main() {
         .route("/games/:game_id", get(get_game))
         .route("/games/:game_id/rom", get(get_game_rom))
         .route("/games", get(list_public_games))
+        .route("/games/by-uwuser/:user_id", get(list_public_games_by_user))
         .route("/games", post(create_game))
         .layer(axum::middleware::from_fn_with_state(appstate.clone(), authn_keycloak_middleware))
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024)) // TODO: this may be 1000x too big

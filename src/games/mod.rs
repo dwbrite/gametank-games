@@ -5,7 +5,7 @@ pub mod get_game;
 
 use std::sync::Arc;
 use axum::{Extension, Json};
-use axum::extract::State;
+use axum::extract::{Path, State};
 use sqlx::FromRow;
 use utoipa::ToSchema;
 
@@ -106,6 +106,57 @@ pub async fn list_public_games(
         ORDER BY
             created_at DESC
         "#
+    )
+        .fetch_all(&app_state.pg_pool)
+        .await;
+
+
+    use futures::future::join_all;
+
+    match games_result {
+        Ok(games) => {
+            let games: Vec<GameEntryMetadata> = games;
+            let g2 = join_all(
+                games.into_iter().map(|entry| entry.humanize(&app_state))
+            ).await;
+
+            Ok((StatusCode::OK, Json(g2)))
+        },
+        Err(e) => {
+            // Log the error for debugging purposes
+            eprintln!("Error fetching games: {:?}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to retrieve games.".to_string(),
+            ))
+        }
+    }
+}
+
+#[authorize(SitePermissions::ViewPublic, || { SiteRoles::default_namespace() })]
+pub async fn list_public_games_by_user(
+    State(app_state): State<Arc<AppState>>,
+    Extension(user_info): Extension<KeycloakUserInfo>,
+    Path(user_id): Path<Uuid>,
+) -> Result<(StatusCode, Json<Vec<GameEntryMetadataDisplay>>), (StatusCode, String)> {
+    let games_result = sqlx::query_as!(
+        GameEntryMetadata,
+        r#"
+        SELECT
+            game_id,
+            game_name,
+            description,
+            author,
+            created_at,
+            updated_at
+        FROM
+            game_entries
+        WHERE public_access
+        AND author = $1
+        ORDER BY
+            created_at DESC
+        "#,
+        user_id,
     )
         .fetch_all(&app_state.pg_pool)
         .await;
